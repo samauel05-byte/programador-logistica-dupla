@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programador de Logística - Grupo Dupla | Equipos Pesados</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-primary: #EE3631;
+            --color-dark: #1A1A1A;
+            --color-light: #F8F8F8;
+            --color-border: #E5E5E5;
+            --color-success: #10B981;
+            --color-error: #EE3631;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, var(--color-light) 0%, #F3F4F6 100%);
+            color: var(--color-dark);
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--color-dark) 0%, #2A2A2A 100%);
+            color: white;
+            padding: 2rem 1rem;
+            border-bottom: 5px solid var(--color-primary);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .header-content {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .logo-svg {
+            height: 110px;
+            width: auto;
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2));
+            flex-shrink: 0;
+        }
+
+        .header-text {
+            flex: 1;
+            min-width: 250px;
+            margin-left: 1rem;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            letter-spacing: -0.5px;
+            color: white;
+        }
+
+        header p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            font-weight: 300;
+            color: #E8E8E8;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--color-dark);
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--color-primary);
+            padding-bottom: 0.75rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--color-dark);
+            font-size: 0.95rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(238, 54, 49, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        button {
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            padding: 0.875rem 2rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
+            box-shadow: 0 4px 12px rgba(238, 54, 49, 0.2);
+        }
+
+        button:hover {
+            background: #D5322B;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(238, 54, 49, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            display: none;
+            border-left: 4px solid;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #D1FAE5;
+            color: #065F46;
+            border-left-color: var(--color-success);
+        }
+
+        .alert-error {
+            background: #FEE2E2;
+            color: #7F1D1D;
+            border-left-color: var(--color-error);
+        }
+
+        .alert-conflicto {
+            background: #FEE2E2;
+            color: #991B1B;
+            border-left: 4px solid var(--color-error);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .equipo-card {
+            background: #F9FAFB;
+            border: 2px solid var(--color-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .equipo-card:hover {
+            border-color: var(--color-primary);
+            box-shadow: 0 4px 12px rgba(238, 54, 49, 0.15);
+        }
+
+        .equipo-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--color-dark);
+            margin-bottom: 0.75rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .status-disponible {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .status-en-uso {
+            background: #FEE2E2;
+            color: #7F1D1D;
+        }
+
+        .tiempo-restante {
+            font-size: 0.9rem;
+            color: #EE3631;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .timeline {
+            border-top: 1px solid var(--color-border);
+            padding-top: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .timeline-item {
+            background: white;
+            border-left: 4px solid var(--color-border);
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .timeline-item.en-uso {
+            background: #FEE2E2;
+            border-left-color: var(--color-primary);
+        }
+
+        .timeline-item.futuro {
+            background: #E0E7FF;
+            border-left-color: #6366F1;
+        }
+
+        footer {
+            background: var(--color-dark);
+            color: white;
+            text-align: center;
+            padding: 1.5rem;
+            margin-top: 3rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1.5rem 1rem;
+            }
+
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+
+            .header-text {
+                min-width: auto;
+            }
+
+            .logo-svg {
+                height: 70px;
+            }
+
+            header h1 {
+                font-size: 1.5rem;
+            }
+
+            .calendar-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="header-text">
+                <h1>Programador de Logística</h1>
+                <p>Gestión profesional de disponibilidad de equipos</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="alert" class="alert"></div>
+
+        <div class="card">
+            <h2 class="section-title">🚜 Programar Asignación</h2>
+            <form id="citaForm">
+                <div class="form-group">
+                    <label for="nombre">Nombre Completo *</label>
+                    <input type="text" id="nombre" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="proyecto">Proyecto *</label>
+                        <select id="proyecto" required>
+                            <option value="">Selecciona un proyecto...</option>
+                            <option value="HACIENDA A7">HACIENDA A7</option>
+                            <option value="HACIENDA C24">HACIENDA C24</option>
+                            <option value="HACIENDA C26">HACIENDA C26</option>
+                            <option value="HACIENDA C36-37">HACIENDA C36-37</option>
+                            <option value="HACIENDA A79">HACIENDA A79</option>
+                            <option value="HACIENDA B46">HACIENDA B46</option>
+                            <option value="HACIENDA DEL MAR">HACIENDA DEL MAR</option>
+                            <option value="MANGLE 22">MANGLE 22</option>
+                            <option value="CANOA 14">CANOA 14</option>
+                            <option value="CANOA 26">CANOA 26</option>
+                            <option value="PAYAO 10">PAYAO 10</option>
+                            <option value="SERENA 20">SERENA 20</option>
+                            <option value="HACIENDA A73">HACIENDA A73</option>
+                            <option value="CORALES 80">CORALES 80</option>
+                            <option value="CORALES 81">CORALES 81</option>
+                            <option value="CORALES 47">CORALES 47</option>
+                            <option value="CORALES 78">CORALES 78</option>
+                            <option value="CASA MARCEL">CASA MARCEL</option>
+                            <option value="CASA DANIEL">CASA DANIEL</option>
+                            <option value="NASAS 9">NASAS 9</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="equipo">Equipo Pesado *</label>
+                        <select id="equipo" required>
+                            <option value="">Selecciona un equipo...</option>
+                            <option value="GDA-PE-510 Minicargador">GDA-PE-510 Minicargador</option>
+                            <option value="GDA-PE-511 Retro Pala">GDA-PE-511 Retro Pala</option>
+                            <option value="GDA-PE-512 Telehandler">GDA-PE-512 Telehandler</option>
+                            <option value="GDA-PE-513 Minicargador">GDA-PE-513 Minicargador</option>
+                            <option value="GDA-PE-517 Pala">GDA-PE-517 Pala</option>
+                            <option value="GDA-CA-213 Camión (Ronny)">GDA-CA-213 Camión (Ronny)</option>
+                            <option value="GDA-CA-214 Camión (Angel)">GDA-CA-214 Camión (Angel)</option>
+                            <option value="GDA-CA-215 Camión (Ramón)">GDA-CA-215 Camión (Ramón)</option>
+                            <option value="GDA-CA-518 Camión (Arsenio)">GDA-CA-518 Camión (Arsenio)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inicio">Fecha y Hora de Inicio *</label>
+                        <input type="datetime-local" id="inicio" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="duracion">Duración (horas) *</label>
+                        <input type="number" id="duracion" min="1" placeholder="Ej: 8" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="notas">Notas Adicionales</label>
+                    <textarea id="notas" placeholder="Descripción del proyecto, ubicación, requisitos especiales..."></textarea>
+                </div>
+
+                <button type="submit">+ Programar Asignación</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2 class="section-title">🔐 Acceso Administrador</h2>
+            <p style="margin-bottom: 1.5rem; color: #6B7280;">
+                Ingresa el código maestro para acceder a funciones de administración y eliminar asignaciones.
+            </p>
+            <div class="form-group" style="max-width: 300px;">
+                <label for="codigoMaestro">Código Maestro *</label>
+                <input type="password" id="codigoMaestro" placeholder="Ingresa el código">
+            </div>
+            <button type="button" onclick="activarModoAdmin()">🔓 Desbloquear Administrador</button>
+            <div id="modoAdminIndicador" style="margin-top: 1rem; padding: 0.8rem; border-radius: 6px; display: none; background: #FEE2E2; border: 1px solid #FCA5A5;">
+                <p id="modoAdminTexto"></p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="section-title">🗓️ Estado Logístico de Equipos</h2>
+            <p style="margin-bottom: 1.5rem; color: #6B7280;">
+                <strong>Estado actual de todos los equipos:</strong> 🟢 Verde = Disponible | 🟠 Rojo = En Uso
+            </p>
+            <div id="dashboardEquipos" class="calendar-grid">
+                <!-- Se llena automáticamente con JavaScript -->
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="section-title">📊 Reportería Mensual</h2>
+            <p style="margin-bottom: 1.5rem; color: #6B7280;">
+                <strong>Genera un reporte mensual de asignaciones:</strong> Descarga los datos actuales y limpia el histórico.
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label for="mesReporte">Mes y Año del Reporte *</label>
+                    <input type="month" id="mesReporte" required>
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button type="button" onclick="generarReporte()" style="margin-top: 0;">📥 Generar Reporte</button>
+                </div>
+            </div>
+            <div id="reporteInfo" style="margin-top: 1rem; padding: 1rem; background: #F3F4F6; border-radius: 6px; display: none;">
+                <p id="reporteTexto"></p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Grupo Dupla | Constructora Dupla • Porto Valencia</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Version 0.0.3</p>
+    </footer>
+
+    <script>
+        const citaForm = document.getElementById('citaForm');
+        const alertBox = document.getElementById('alert');
+        
+        // Código maestro (puedes cambiar esto)
+        const CODIGO_MAESTRO = '2024';
+        let modoAdminActivo = false;
+
+        // Cargar asignaciones del localStorage
+        function cargarCitas() {
+            return JSON.parse(localStorage.getItem('asignacionesDupla') || '[]');
+        }
+
+        // Guardar asignaciones en localStorage
+        function guardarCitas(citas) {
+            localStorage.setItem('asignacionesDupla', JSON.stringify(citas));
+            actualizarDashboard();
+        }
+
+        // Mostrar alerta
+        function mostrarAlerta(mensaje, tipo = 'success') {
+            alertBox.textContent = mensaje;
+            alertBox.className = `alert show alert-${tipo}`;
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+            }, 4000);
+        }
+
+        // Agregar cita
+        citaForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const equipo = document.getElementById('equipo').value;
+            const inicio = document.getElementById('inicio').value;
+            const duracion = parseInt(document.getElementById('duracion').value);
+
+            if (!equipo || !inicio || !duracion) {
+                mostrarAlerta('⚠️ Completa todos los campos requeridos', 'error');
+                return;
+            }
+
+            // Verificar conflictos
+            const conflicto = verificarConflicto(equipo, inicio, duracion);
+            if (conflicto) {
+                mostrarAlerta(`❌ ${conflicto}`, 'error');
+                return;
+            }
+
+            const cita = {
+                id: Date.now(),
+                nombre: document.getElementById('nombre').value,
+                proyecto: document.getElementById('proyecto').value,
+                equipo: equipo,
+                inicio: inicio,
+                duracion: duracion,
+                notas: document.getElementById('notas').value,
+                fechaAgendado: new Date().toLocaleDateString('es-DO'),
+                estado: 'Activa'
+            };
+
+            const citas = cargarCitas();
+            citas.push(cita);
+            guardarCitas(citas);
+            actualizarDashboard();
+
+            citaForm.reset();
+            mostrarAlerta('✅ Asignación programada exitosamente');
+        });
+
+        // Verificar conflicto de disponibilidad
+        function verificarConflicto(equipo, inicio, duracion) {
+            const citas = cargarCitas();
+            const fechaInicio = new Date(inicio);
+            const fechaFin = new Date(fechaInicio.getTime() + duracion * 60 * 60 * 1000);
+
+            for (let cita of citas) {
+                if (cita.equipo === equipo) {
+                    const citaInicio = new Date(cita.inicio);
+                    const citaFin = new Date(citaInicio.getTime() + cita.duracion * 60 * 60 * 1000);
+
+                    // Verificar si hay solapamiento
+                    if (fechaInicio < citaFin && fechaFin > citaInicio) {
+                        const inicioFormato = citaInicio.toLocaleString('es-DO');
+                        const finFormato = citaFin.toLocaleString('es-DO');
+                        return `El equipo "${equipo}" ya está reservado desde ${inicioFormato} hasta ${finFormato} (Proyecto: ${cita.proyecto})`;
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Actualizar Dashboard de Disponibilidad
+        function actualizarDashboard() {
+            const citas = cargarCitas();
+            const equipos = [
+                'GDA-PE-510 Minicargador',
+                'GDA-PE-511 Retro Pala',
+                'GDA-PE-512 Telehandler',
+                'GDA-PE-513 Minicargador',
+                'GDA-PE-517 Pala',
+                'GDA-CA-213 Camión (Ronny)',
+                'GDA-CA-214 Camión (Angel)',
+                'GDA-CA-215 Camión (Ramón)',
+                'GDA-CA-518 Camión (Arsenio)'
+            ];
+
+            const dashboardEl = document.getElementById('dashboardEquipos');
+            let html = '';
+
+            equipos.forEach(equipo => {
+                const citasEquipo = citas.filter(c => c.equipo === equipo).sort((a, b) => new Date(a.inicio) - new Date(b.inicio));
+                const ahora = new Date();
+
+                // Determinar estado actual
+                let estadoActual = 'Disponible';
+                let tiempoRestante = '';
+
+                citasEquipo.forEach(cita => {
+                    const citaInicio = new Date(cita.inicio);
+                    const citaFin = new Date(citaInicio.getTime() + cita.duracion * 60 * 60 * 1000);
+
+                    if (ahora >= citaInicio && ahora < citaFin) {
+                        estadoActual = 'En Uso';
+                        const minutosRestantes = Math.ceil((citaFin - ahora) / (1000 * 60));
+                        const horas = Math.floor(minutosRestantes / 60);
+                        const minutos = minutosRestantes % 60;
+                        
+                        if (horas > 0) {
+                            tiempoRestante = `Disponible en ${horas}h ${minutos}m`;
+                        } else {
+                            tiempoRestante = `Disponible en ${minutos}m`;
+                        }
+                    }
+                });
+
+                const badgeClass = estadoActual === 'En Uso' ? 'status-en-uso' : 'status-disponible';
+                const emoji = estadoActual === 'En Uso' ? '🟠' : '🟢';
+
+                html += `
+                    <div class="equipo-card">
+                        <div class="equipo-name">
+                            ${emoji} ${equipo}
+                        </div>
+                        <span class="status-badge ${badgeClass}">${estadoActual}</span>
+                        
+                        ${tiempoRestante ? `<div class="tiempo-restante">⏱️ ${tiempoRestante}</div>` : ''}
+                        
+                        ${citasEquipo.length > 0 ? `
+                            <div class="timeline">
+                                <strong style="font-size: 0.9rem;">Próximas citas:</strong>
+                                ${citasEquipo.slice(0, 3).map((cita, idx) => {
+                                    const citaInicio = new Date(cita.inicio);
+                                    const citaFin = new Date(citaInicio.getTime() + cita.duracion * 60 * 60 * 1000);
+                                    const esActual = ahora >= citaInicio && ahora < citaFin;
+                                    const indexGlobal = citas.findIndex(c => c.inicio === cita.inicio && c.equipo === cita.equipo && c.nombre === cita.nombre);
+                                    
+                                    return `
+                                        <div class="timeline-item ${esActual ? 'en-uso' : 'futuro'}">
+                                            📍 <strong>${cita.proyecto}</strong><br>
+                                            <small>${citaInicio.toLocaleString('es-DO')}</small><br>
+                                            ⏱️ Duración: ${cita.duracion}h<br>
+                                            👤 ${cita.nombre}
+                                            ${modoAdminActivo ? `<br><button onclick="eliminarAsignacion(${indexGlobal})" style="margin-top: 0.5rem; padding: 0.3rem 0.6rem; font-size: 0.8rem; background: #EF4444; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️ Eliminar</button>` : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        ` : `
+                            <div class="timeline">
+                                <span style="color: #10B981; font-weight: 600;">✓ Sin reservas próximas</span>
+                            </div>
+                        `}
+                    </div>
+                `;
+            });
+
+            dashboardEl.innerHTML = html;
+        }
+
+        // Activar modo administrador con código maestro
+        function activarModoAdmin() {
+            const codigo = document.getElementById('codigoMaestro').value;
+            const indicador = document.getElementById('modoAdminIndicador');
+            const textoIndicador = document.getElementById('modoAdminTexto');
+
+            if (!codigo) {
+                mostrarAlerta('⚠️ Ingresa el código maestro', 'error');
+                return;
+            }
+
+            if (codigo === CODIGO_MAESTRO) {
+                modoAdminActivo = true;
+                document.getElementById('codigoMaestro').value = '';
+                indicador.style.background = '#DCFCE7';
+                indicador.style.borderColor = '#86EFAC';
+                textoIndicador.textContent = '✅ MODO ADMINISTRADOR ACTIVO - Puedes eliminar asignaciones';
+                indicador.style.display = 'block';
+                mostrarAlerta('✅ Modo administrador activado', 'success');
+                actualizarDashboard();
+            } else {
+                modoAdminActivo = false;
+                indicador.style.display = 'none';
+                mostrarAlerta('❌ Código maestro incorrecto', 'error');
+                document.getElementById('codigoMaestro').value = '';
+            }
+        }
+
+        // Eliminar una asignación (solo en modo admin)
+        function eliminarAsignacion(index) {
+            if (!modoAdminActivo) {
+                mostrarAlerta('🔒 Necesitas estar en modo administrador', 'error');
+                return;
+            }
+
+            const citas = cargarCitas();
+            const cita = citas[index];
+            const confirmar = confirm(`¿Eliminar asignación de "${cita.equipo}" en ${new Date(cita.inicio).toLocaleString('es-DO')}?`);
+            
+            if (confirmar) {
+                citas.splice(index, 1);
+                guardarCitas(citas);
+                mostrarAlerta('🗑️ Asignación eliminada correctamente', 'success');
+            }
+        }
+
+        // Generar reporte mensual y limpiar datos antiguos
+        function generarReporte() {
+            const mesReporte = document.getElementById('mesReporte').value;
+            if (!mesReporte) {
+                mostrarAlerta('⚠️ Selecciona un mes para generar el reporte', 'error');
+                return;
+            }
+
+            const citas = cargarCitas();
+            const [anio, mes] = mesReporte.split('-').map(Number);
+            
+            // Filtrar asignaciones del mes seleccionado
+            const citasMes = citas.filter(cita => {
+                const fecha = new Date(cita.inicio);
+                return fecha.getFullYear() === anio && (fecha.getMonth() + 1) === mes;
+            });
+
+            if (citasMes.length === 0) {
+                mostrarAlerta('ℹ️ No hay asignaciones para el mes seleccionado', 'error');
+                return;
+            }
+
+            // Generar nombre del archivo
+            const nombreMes = new Date(anio, mes - 1).toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
+            const nombreArchivo = `Reporte_Logistica_${nombreMes.replace(' ', '_')}.csv`;
+
+            // Crear contenido CSV
+            const headers = ['Proyecto', 'Equipo', 'Capataz', 'Fecha Inicio', 'Duración (horas)', 'Notas'];
+            const rows = citasMes.map(cita => {
+                const fecha = new Date(cita.inicio).toLocaleString('es-DO');
+                return [
+                    cita.proyecto,
+                    cita.equipo,
+                    cita.nombre,
+                    fecha,
+                    cita.duracion,
+                    cita.notas.replace(/,/g, ';')
+                ];
+            });
+
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => {
+                csv += '"' + row.join('","') + '"\n';
+            });
+
+            // Descargar archivo
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', nombreArchivo);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Eliminar datos del mes reportado
+            const citasRestantes = citas.filter(cita => {
+                const fecha = new Date(cita.inicio);
+                return !(fecha.getFullYear() === anio && (fecha.getMonth() + 1) === mes);
+            });
+
+            guardarCitas(citasRestantes);
+            
+            // Mostrar confirmación
+            const reporteInfo = document.getElementById('reporteInfo');
+            const reporteTexto = document.getElementById('reporteTexto');
+            reporteTexto.innerHTML = `✅ <strong>Reporte generado exitosamente</strong><br>
+                Archivo descargado: ${nombreArchivo}<br>
+                Asignaciones procesadas: ${citasMes.length}<br>
+                Datos del mes eliminados del sistema`;
+            reporteInfo.style.display = 'block';
+
+            mostrarAlerta(`✅ Reporte de ${nombreMes} descargado y datos limpiados`, 'success');
+            document.getElementById('mesReporte').value = '';
+        }
+
+        // Inicializar dashboard al cargar
+        actualizarDashboard();
+    </script>
+</body>
+</html>
