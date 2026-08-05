@@ -2685,11 +2685,37 @@
             // aunque compartan equipo y dia). Si una solicitud cruza mas de un dia
             // (duracion larga), se reparte en un segmento por dia, y el costo se
             // prorratea segun las horas que caen en cada segmento.
+            //
+            // Las horas SOLO empiezan a correr cuando se marca "Iniciar labor"
+            // (inicio_real), no desde la hora programada de la solicitud (cita.inicio).
+            // Si nunca se marcó "Iniciar labor", no hubo trabajo real registrado, así
+            // que la solicitud aparece en el reporte con 0 horas y 0 costo.
             const filas = [];
             citasMes.forEach(cita => {
-                const segmentos = calcularSegmentosPorDia(cita.inicio, cita.duracion);
                 const duracionTotal = Number(cita.duracion) || 0;
                 const costoTotalOriginal = Number(cita.costo) || 0;
+
+                if (!cita.inicio_real) {
+                    const fechaBase = new Date(cita.inicio);
+                    const pad = n => String(n).padStart(2, '0');
+                    const fechaKey = `${fechaBase.getFullYear()}-${pad(fechaBase.getMonth() + 1)}-${pad(fechaBase.getDate())}`;
+                    filas.push({
+                        fecha: fechaKey,
+                        equipo: cita.equipo,
+                        proyecto: cita.proyecto,
+                        solicitante: cita.nombre || '',
+                        maniana: 0,
+                        tarde: 0,
+                        costoSegmento: 0,
+                        horasPausadasSegmento: 0,
+                        motivosPausaTexto: 'No inició labor',
+                        segInicio: fechaBase,
+                        llegadaReal: cita.llegada_real || null
+                    });
+                    return;
+                }
+
+                const segmentos = calcularSegmentosPorDia(cita.inicio_real, duracionTotal);
 
                 // Pausas (equipo detenido: lluvia, avería, pinchazo, etc.) descuentan
                 // del costo, ya que ese tiempo no fue trabajado. Solo se cuentan las
