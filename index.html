@@ -1606,7 +1606,7 @@
 
             const detalleConflictos = conflictos.map(c => {
                 const ci = new Date(c.inicio).toLocaleString('es-DO');
-                const cf = calcularFinJornada(new Date(c.inicio), c.duracion, c.urgente).toLocaleString('es-DO');
+                const cf = finEstimado(c).toLocaleString('es-DO');
                 return `  • "${c.proyecto}" (${c.nombre}), de ${ci} a ${cf}`;
             }).join('\n');
 
@@ -1724,7 +1724,7 @@
                 if (estaVencidaSinTerminar(c)) {
                     mostrarAlerta(`❌ El equipo "${equipo}" sigue en uso desde ${inicioFormato} (Proyecto: ${c.proyecto}) — su turno venció pero nadie lo ha marcado "Terminó su labor". Marca "Es urgente" si necesitas aplazar esa reserva.`, 'error');
                 } else {
-                    const finFormato = calcularFinJornada(new Date(c.inicio), c.duracion, c.urgente).toLocaleString('es-DO');
+                    const finFormato = finEstimado(c).toLocaleString('es-DO');
                     mostrarAlerta(`❌ El equipo "${equipo}" ya está reservado desde ${inicioFormato} hasta ${finFormato} (Proyecto: ${c.proyecto}). Marca "Es urgente" si necesitas aplazar esa reserva.`, 'error');
                 }
                 return;
@@ -1892,13 +1892,26 @@
             return cursor;
         }
 
+        // Punto de partida real de las horas contratadas: si ya se marcó "Iniciar
+        // labor" (inicio_real), las horas corren desde ahí, no desde la hora
+        // programada. Si todavía no ha llegado/iniciado, se usa la hora programada
+        // como estimado (es lo único que se conoce hasta ese momento).
+        function inicioEfectivo(cita) {
+            return new Date(cita.inicio_real || cita.inicio);
+        }
+
+        // Fin estimado/real de la jornada de una cita, contando las horas
+        // contratadas a partir de inicioEfectivo() en vez de la hora programada.
+        function finEstimado(cita) {
+            return calcularFinJornada(inicioEfectivo(cita), cita.duracion, cita.urgente);
+        }
+
         // ¿La cita ya debería haber terminado según lo planificado, pero nadie
         // presionó "Terminó su labor" todavía? Mientras esto sea true, el equipo
         // se sigue considerando ocupado más allá de su duración planificada.
         function estaVencidaSinTerminar(cita) {
             if (cita.trabajo_terminado) return false;
-            const finPlanificado = calcularFinJornada(new Date(cita.inicio), cita.duracion, cita.urgente);
-            return finPlanificado <= new Date();
+            return finEstimado(cita) <= new Date();
         }
 
         // Fin "real" de una cita para efectos de bloquear el horario del equipo:
@@ -1906,11 +1919,12 @@
         // - Si su horario planificado ya venció pero nadie la marcó terminada,
         //   se trata como si no tuviera fin conocido todavía (bloquea cualquier
         //   siguiente reserva del mismo equipo, aplazándola indefinidamente).
-        // - Si no, se usa el fin planificado normal.
+        // - Si no, se usa el fin estimado (desde inicio_real si ya empezó, o desde
+        //   la hora programada si todavía no).
         function finParaConflictos(cita) {
             if (cita.finalizado_en) return new Date(cita.finalizado_en);
             if (estaVencidaSinTerminar(cita)) return new Date(8640000000000000);
-            return calcularFinJornada(new Date(cita.inicio), cita.duracion, cita.urgente);
+            return finEstimado(cita);
         }
 
         // Verificar conflicto de disponibilidad
@@ -2006,7 +2020,7 @@
                     if (estaVencidaSinTerminar(c)) {
                         aviso.textContent = `🟠 El equipo "${equipo}" sigue en uso desde ${inicioFormato} (Proyecto: ${c.proyecto}) — su turno ya venció pero nadie lo ha marcado "Terminó su labor", así que sigue bloqueado. Elige otro equipo, espera a que lo marquen terminado, o marca "Es urgente" para aplazarla.`;
                     } else {
-                        const finFormato = calcularFinJornada(new Date(c.inicio), c.duracion, c.urgente).toLocaleString('es-DO');
+                        const finFormato = finEstimado(c).toLocaleString('es-DO');
                         aviso.textContent = `🟠 El equipo "${equipo}" ya está reservado desde ${inicioFormato} hasta ${finFormato} (Proyecto: ${c.proyecto}). Elige otro horario o equipo, o marca "Es urgente" para aplazarla.`;
                     }
                     aviso.className = 'aviso-disponibilidad show aviso-en-uso';
@@ -2055,7 +2069,7 @@
 
                 citasEquipo.forEach(cita => {
                     const citaInicio = new Date(cita.inicio);
-                    const finPlanificado = calcularFinJornada(citaInicio, cita.duracion, cita.urgente);
+                    const finPlanificado = finEstimado(cita);
 
                     // Ya empezó y no ha sido marcada terminada: sigue "En Uso" aunque su
                     // duración planificada ya se haya cumplido (mientras nadie la marque
