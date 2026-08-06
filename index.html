@@ -1024,7 +1024,7 @@
 
     <footer>
         <p>&copy; 2026 Grupo Dupla | Constructora Dupla • Porto Valencia RD</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 0.9</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 1.0</p>
         <div class="footer-social">
             <a href="https://www.instagram.com/grupodupla/" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grupo Dupla" title="Instagram">
                 <svg viewBox="0 0 24 24"><path d="M12 2c2.72 0 3.06.01 4.12.06 1.07.05 1.79.22 2.43.46.66.25 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.06.06 1.4.06 4.12s-.01 3.06-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.06.05-1.4.06-4.12.06s-3.06-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.06 2 14.72 2 12s.01-3.06.06-4.12c.05-1.07.22-1.79.46-2.43.25-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.5c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.28 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.2-8.4a1.17 1.17 0 1 1 0-2.34 1.17 1.17 0 0 1 0 2.34z"/></svg>
@@ -1471,19 +1471,30 @@
         // Marca la hora real en que el equipo llegó a la obra (puede diferir de la
         // hora programada). No implica que ya empezó a trabajar (ver iniciarLabor).
         async function marcarLlegada(id) {
-            // Si esta reserva había quedado marcada como "no recibida" (estado_recepcion
-            // = 'no_recibido') antes de que el equipo llegara de verdad, hay que limpiar
-            // esa marca aquí: una llegada confirmada siempre debe ganarle a un estado
-            // "no llegó" anterior, si no la tarjeta se queda pegada en rojo para siempre
-            // aunque el equipo ya esté ahí.
+            // Registrar la llegada es lo crítico: esto tiene que funcionar siempre,
+            // sin importar qué pase con la limpieza de estado_recepcion de abajo.
             const { error } = await sb.from('reservas')
-                .update({ llegada_real: new Date().toISOString(), estado_recepcion: null })
+                .update({ llegada_real: new Date().toISOString() })
                 .eq('id', id);
             if (error) {
                 console.error('Error marcando llegada:', error);
                 mostrarAlerta('❌ No se pudo registrar la llegada', 'error');
                 return;
             }
+
+            // Best-effort: si esta reserva había quedado marcada como "no recibida"
+            // (estado_recepcion = 'no_recibido') antes de que el equipo llegara de
+            // verdad, se intenta limpiar esa marca vieja. Esto es solo cosmético/de
+            // datos — si falla (por ejemplo por una restricción de la columna en la
+            // base de datos), NO debe bloquear ni mostrar error, porque la llegada ya
+            // quedó registrada arriba, que es lo que realmente importa. La tarjeta ya
+            // no depende de este campo para mostrarse bien (ver citaActual más abajo).
+            try {
+                await sb.from('reservas').update({ estado_recepcion: null }).eq('id', id);
+            } catch (e) {
+                console.error('No se pudo limpiar estado_recepcion (no crítico):', e);
+            }
+
             await recargarCitas();
             actualizarDashboard();
             mostrarAlerta('📍 Llegada registrada', 'success');
