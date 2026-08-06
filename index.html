@@ -1024,7 +1024,7 @@
 
     <footer>
         <p>&copy; 2026 Grupo Dupla | Constructora Dupla • Porto Valencia RD</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 0.6</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 0.7</p>
         <div class="footer-social">
             <a href="https://www.instagram.com/grupodupla/" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grupo Dupla" title="Instagram">
                 <svg viewBox="0 0 24 24"><path d="M12 2c2.72 0 3.06.01 4.12.06 1.07.05 1.79.22 2.43.46.66.25 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.06.06 1.4.06 4.12s-.01 3.06-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.06.05-1.4.06-4.12.06s-3.06-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.06 2 14.72 2 12s.01-3.06.06-4.12c.05-1.07.22-1.79.46-2.43.25-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.5c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.28 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.2-8.4a1.17 1.17 0 1 1 0-2.34 1.17 1.17 0 0 1 0 2.34z"/></svg>
@@ -2142,52 +2142,76 @@
                 let estadoActual = 'Disponible';
                 let tiempoRestante = '';
 
+                // De todas las citas del equipo cuyo horario ya empezó, hay que elegir
+                // UNA sola para mostrar arriba en la tarjeta. Antes se iba sobreescribiendo
+                // con cada cita que calzara (la última de la cola siempre ganaba), lo que
+                // podía mostrar "no llegó"/"pendiente" encima de una cita que sí llegó, solo
+                // porque había otra más adelante en la cola cuyo horario programado también
+                // ya había pasado. Ahora se elige explícitamente: una cita que YA llegó a
+                // obra manda siempre sobre una que todavía no ha llegado, sin importar cuál
+                // esté más adelante en la cola.
+                let citaActual = null;
                 citasEquipo.forEach(cita => {
                     const citaInicio = new Date(cita.inicio);
+                    if (ahora < citaInicio) return;
+                    if (!citaActual) {
+                        citaActual = cita;
+                        return;
+                    }
+                    const actualLlego = !!citaActual.llegada_real;
+                    const nuevaLlego = !!cita.llegada_real;
+                    if (nuevaLlego && !actualLlego) {
+                        citaActual = cita; // una que sí llegó siempre gana sobre una que no
+                    } else if (nuevaLlego === actualLlego) {
+                        citaActual = cita; // empate: se queda la más adelantada en la cola
+                    }
+                    // si actualLlego && !nuevaLlego, se conserva citaActual (ya llegó)
+                });
 
-                    if (ahora >= citaInicio) {
-                        if (cita.estado_recepcion === 'no_recibido') {
-                            // Si a esta cita la marcaron "No Recepción", el equipo nunca
-                            // llegó a la obra, así que no está realmente "En Uso" aunque
-                            // esté dentro de su horario programado.
-                            estadoActual = 'No Llegó';
-                            tiempoRestante = '';
-                        } else if (!cita.llegada_real) {
-                            // Ya empezó su horario programado pero todavía nadie ha marcado
-                            // "Llegada a obra": el equipo NO está realmente en uso todavía
-                            // (nada ha empezado a correr de verdad), así que no se muestra
-                            // como "Vencido — falta marcar Terminó su labor" (eso implicaría
-                            // que ya trabajó). En vez de eso, se avisa que está pendiente de
-                            // llegada y cuánto tiempo de retraso lleva.
-                            estadoActual = 'Pendiente de Llegada';
-                            const minutosRetraso = Math.floor((ahora - citaInicio) / (1000 * 60));
-                            if (minutosRetraso > 0) {
-                                const horasR = Math.floor(minutosRetraso / 60);
-                                const minR = minutosRetraso % 60;
-                                tiempoRestante = `⚠️ Retrasado ${horasR > 0 ? horasR + 'h ' : ''}${minR}m — falta marcar "Llegada a obra"`;
-                            } else {
-                                tiempoRestante = '';
-                            }
+                if (citaActual) {
+                    const cita = citaActual;
+                    const citaInicio = new Date(cita.inicio);
+                    if (cita.estado_recepcion === 'no_recibido') {
+                        // Si a esta cita la marcaron "No Recepción", el equipo nunca
+                        // llegó a la obra, así que no está realmente "En Uso" aunque
+                        // esté dentro de su horario programado.
+                        estadoActual = 'No Llegó';
+                        tiempoRestante = '';
+                    } else if (!cita.llegada_real) {
+                        // Ya empezó su horario programado pero todavía nadie ha marcado
+                        // "Llegada a obra": el equipo NO está realmente en uso todavía
+                        // (nada ha empezado a correr de verdad), así que no se muestra
+                        // como "Vencido — falta marcar Terminó su labor" (eso implicaría
+                        // que ya trabajó). En vez de eso, se avisa que está pendiente de
+                        // llegada y cuánto tiempo de retraso lleva.
+                        estadoActual = 'Pendiente de Llegada';
+                        const minutosRetraso = Math.floor((ahora - citaInicio) / (1000 * 60));
+                        if (minutosRetraso > 0) {
+                            const horasR = Math.floor(minutosRetraso / 60);
+                            const minR = minutosRetraso % 60;
+                            tiempoRestante = `⚠️ Retrasado ${horasR > 0 ? horasR + 'h ' : ''}${minR}m — falta marcar "Llegada a obra"`;
                         } else {
-                            // Ya llegó a obra: sigue "En Uso" aunque su duración planificada
-                            // ya se haya cumplido (mientras nadie la marque terminada, sigue
-                            // bloqueando el equipo y aplazando la siguiente reserva).
-                            estadoActual = 'En Uso';
-                            const finPlanificado = finEstimado(cita);
-                            if (ahora < finPlanificado) {
-                                const minutosRestantes = Math.ceil((finPlanificado - ahora) / (1000 * 60));
-                                const horas = Math.floor(minutosRestantes / 60);
-                                const minutos = minutosRestantes % 60;
-                                tiempoRestante = horas > 0 ? `Disponible en ${horas}h ${minutos}m` : `Disponible en ${minutos}m`;
-                            } else {
-                                const minutosExtra = Math.ceil((ahora - finPlanificado) / (1000 * 60));
-                                const horasExtra = Math.floor(minutosExtra / 60);
-                                const minExtra = minutosExtra % 60;
-                                tiempoRestante = `⏰ Vencido hace ${horasExtra > 0 ? horasExtra + 'h ' : ''}${minExtra}m — falta marcar "Terminó su labor"`;
-                            }
+                            tiempoRestante = '';
+                        }
+                    } else {
+                        // Ya llegó a obra: sigue "En Uso" aunque su duración planificada
+                        // ya se haya cumplido (mientras nadie la marque terminada, sigue
+                        // bloqueando el equipo y aplazando la siguiente reserva).
+                        estadoActual = 'En Uso';
+                        const finPlanificado = finEstimado(cita);
+                        if (ahora < finPlanificado) {
+                            const minutosRestantes = Math.ceil((finPlanificado - ahora) / (1000 * 60));
+                            const horas = Math.floor(minutosRestantes / 60);
+                            const minutos = minutosRestantes % 60;
+                            tiempoRestante = horas > 0 ? `Disponible en ${horas}h ${minutos}m` : `Disponible en ${minutos}m`;
+                        } else {
+                            const minutosExtra = Math.ceil((ahora - finPlanificado) / (1000 * 60));
+                            const horasExtra = Math.floor(minutosExtra / 60);
+                            const minExtra = minutosExtra % 60;
+                            tiempoRestante = `⏰ Vencido hace ${horasExtra > 0 ? horasExtra + 'h ' : ''}${minExtra}m — falta marcar "Terminó su labor"`;
                         }
                     }
-                });
+                }
 
                 // El estado "Fuera de Servicio" tiene prioridad sobre todo lo demás
                 const fueraServicio = estaFueraDeServicio(equipo);
