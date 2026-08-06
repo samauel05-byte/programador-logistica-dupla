@@ -1024,7 +1024,7 @@
 
     <footer>
         <p>&copy; 2026 Grupo Dupla | Constructora Dupla • Porto Valencia RD</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 0.7</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 0.8</p>
         <div class="footer-social">
             <a href="https://www.instagram.com/grupodupla/" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grupo Dupla" title="Instagram">
                 <svg viewBox="0 0 24 24"><path d="M12 2c2.72 0 3.06.01 4.12.06 1.07.05 1.79.22 2.43.46.66.25 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.06.06 1.4.06 4.12s-.01 3.06-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.06.05-1.4.06-4.12.06s-3.06-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.06 2 14.72 2 12s.01-3.06.06-4.12c.05-1.07.22-1.79.46-2.43.25-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.5c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.28 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.2-8.4a1.17 1.17 0 1 1 0-2.34 1.17 1.17 0 0 1 0 2.34z"/></svg>
@@ -1402,6 +1402,7 @@
             // urgencia que arrancó tarde y corrió su fin más allá de la siguiente
             // reserva programada) antes de que el tablero se renderice.
             await reconciliarSolapamientos();
+            await limpiarNoRecepcionObsoleta();
         }
 
         // Escuchar cambios en tiempo real
@@ -1460,8 +1461,13 @@
         // Marca la hora real en que el equipo llegó a la obra (puede diferir de la
         // hora programada). No implica que ya empezó a trabajar (ver iniciarLabor).
         async function marcarLlegada(id) {
+            // Si esta reserva había quedado marcada como "no recibida" (estado_recepcion
+            // = 'no_recibido') antes de que el equipo llegara de verdad, hay que limpiar
+            // esa marca aquí: una llegada confirmada siempre debe ganarle a un estado
+            // "no llegó" anterior, si no la tarjeta se queda pegada en rojo para siempre
+            // aunque el equipo ya esté ahí.
             const { error } = await sb.from('reservas')
-                .update({ llegada_real: new Date().toISOString() })
+                .update({ llegada_real: new Date().toISOString(), estado_recepcion: null })
                 .eq('id', id);
             if (error) {
                 console.error('Error marcando llegada:', error);
@@ -1948,6 +1954,25 @@
         function formatearInputDatetime(d) {
             const pad = n => String(n).padStart(2, '0');
             return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        // Corrige reservas que hayan quedado con estado_recepcion = 'no_recibido' a
+        // pesar de tener llegada_real ya registrada — por ejemplo, una reserva que se
+        // marcó "no llegó" en algún momento, pero cuyo equipo terminó llegando después.
+        // Sin esto, la tarjeta del equipo se queda pegada en rojo "NO LLEGÓ" para
+        // siempre, aunque ya se haya marcado la llegada real (el botón para volver a
+        // marcarla ya ni aparece, así que hace falta esta limpieza automática).
+        async function limpiarNoRecepcionObsoleta() {
+            const pendientes = citasCache.filter(c => c.llegada_real && c.estado_recepcion === 'no_recibido');
+            for (const cita of pendientes) {
+                const { error } = await sb.from('reservas').update({ estado_recepcion: null }).eq('id', cita.id);
+                if (error) {
+                    console.error('Error limpiando estado_recepcion obsoleto:', error);
+                } else {
+                    console.log(`🧹 "${cita.proyecto}" (${cita.equipo}) ya tenía llegada real: se limpió su marca vieja de "no llegó".`);
+                    cita.estado_recepcion = null;
+                }
+            }
         }
 
         // Reprograma automáticamente, sin intervención de un admin, cualquier
