@@ -1024,7 +1024,7 @@
 
     <footer>
         <p>&copy; 2026 Grupo Dupla | Constructora Dupla • Porto Valencia RD</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 0.8</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 0.9</p>
         <div class="footer-social">
             <a href="https://www.instagram.com/grupodupla/" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grupo Dupla" title="Instagram">
                 <svg viewBox="0 0 24 24"><path d="M12 2c2.72 0 3.06.01 4.12.06 1.07.05 1.79.22 2.43.46.66.25 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.06.06 1.4.06 4.12s-.01 3.06-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.06.05-1.4.06-4.12.06s-3.06-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.06 2 14.72 2 12s.01-3.06.06-4.12c.05-1.07.22-1.79.46-2.43.25-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.5c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.28 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.2-8.4a1.17 1.17 0 1 1 0-2.34 1.17 1.17 0 0 1 0 2.34z"/></svg>
@@ -1400,9 +1400,19 @@
 
             // Auto-corrige cualquier choque de horario que haya quedado (ej. una
             // urgencia que arrancó tarde y corrió su fin más allá de la siguiente
-            // reserva programada) antes de que el tablero se renderice.
-            await reconciliarSolapamientos();
-            await limpiarNoRecepcionObsoleta();
+            // reserva programada) antes de que el tablero se renderice. Cada paso va en
+            // su propio try/catch: si uno falla con datos inesperados, no debe impedir
+            // que el resto de la carga (y el tablero) funcione con normalidad.
+            try {
+                await reconciliarSolapamientos();
+            } catch (e) {
+                console.error('Error en reconciliarSolapamientos:', e);
+            }
+            try {
+                await limpiarNoRecepcionObsoleta();
+            } catch (e) {
+                console.error('Error en limpiarNoRecepcionObsoleta:', e);
+            }
         }
 
         // Escuchar cambios en tiempo real
@@ -2196,10 +2206,13 @@
                 if (citaActual) {
                     const cita = citaActual;
                     const citaInicio = new Date(cita.inicio);
-                    if (cita.estado_recepcion === 'no_recibido') {
-                        // Si a esta cita la marcaron "No Recepción", el equipo nunca
-                        // llegó a la obra, así que no está realmente "En Uso" aunque
-                        // esté dentro de su horario programado.
+                    if (cita.estado_recepcion === 'no_recibido' && !cita.llegada_real) {
+                        // Si a esta cita la marcaron "No Recepción" Y todavía no hay
+                        // llegada real, el equipo nunca llegó a la obra. Si YA hay
+                        // llegada_real, eso manda siempre sobre la marca vieja de "no
+                        // llegó" (aunque la limpieza en segundo plano de esa marca no
+                        // haya corrido todavía) — nunca se debe mostrar "No Llegó" para
+                        // un equipo que ya llegó de verdad.
                         estadoActual = 'No Llegó';
                         tiempoRestante = '';
                     } else if (!cita.llegada_real) {
