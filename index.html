@@ -902,6 +902,11 @@
                 <input type="file" id="inputLogoBranding" accept="image/png,image/jpeg">
             </div>
             <div class="form-group">
+                <label for="rangoTamanoLogo">Tamaño del logo: <span id="valorTamanoLogo">110</span>px de alto</label>
+                <input type="range" id="rangoTamanoLogo" min="40" max="160" step="1" value="110"
+                    oninput="document.getElementById('valorTamanoLogo').textContent = this.value; previsualizarTamanoLogo(this.value);">
+            </div>
+            <div class="form-group">
                 <label for="inputFaviconBranding">Favicon nuevo (PNG o JPG)</label>
                 <input type="file" id="inputFaviconBranding" accept="image/png,image/jpeg">
             </div>
@@ -1060,7 +1065,7 @@
 
     <footer>
         <p>&copy; 2026 Grupo Dupla | Constructora Dupla • Porto Valencia RD</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 1.9</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 2.0</p>
         <div class="footer-social">
             <a href="https://www.instagram.com/grupodupla/" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grupo Dupla" title="Instagram">
                 <svg viewBox="0 0 24 24"><path d="M12 2c2.72 0 3.06.01 4.12.06 1.07.05 1.79.22 2.43.46.66.25 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.06.06 1.4.06 4.12s-.01 3.06-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.06.05-1.4.06-4.12.06s-3.06-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.06 2 14.72 2 12s.01-3.06.06-4.12c.05-1.07.22-1.79.46-2.43.25-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.5c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.28 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.2-8.4a1.17 1.17 0 1 1 0-2.34 1.17 1.17 0 0 1 0 2.34z"/></svg>
@@ -3871,6 +3876,7 @@
         // en modoAdminActivo, igual que "Vaciar Base de Datos").
         let brandingLogoDataUrl = null;
         let brandingFaviconDataUrl = null;
+        let brandingLogoSizePx = null; // null = usar el tamaño por defecto del CSS (110px)
 
         function leerArchivoComoDataURL(file) {
             return new Promise((resolve, reject) => {
@@ -3879,6 +3885,13 @@
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
             });
+        }
+
+        // Aplica el tamaño del logo al instante mientras se mueve el control
+        // deslizante, antes de guardar (para que el admin vea el resultado).
+        function previsualizarTamanoLogo(px) {
+            const logoImg = document.getElementById('headerLogoImg');
+            if (logoImg) logoImg.style.height = px + 'px';
         }
 
         // Convierte un Data URL ("data:image/png;base64,XXXX") en {base64, extension}
@@ -3900,6 +3913,9 @@
             if (logoImg && brandingLogoDataUrl) {
                 logoImg.src = brandingLogoDataUrl;
             }
+            if (logoImg && brandingLogoSizePx) {
+                logoImg.style.height = brandingLogoSizePx + 'px';
+            }
             const faviconLink = document.getElementById('faviconLink');
             if (faviconLink && brandingFaviconDataUrl) {
                 faviconLink.href = brandingFaviconDataUrl;
@@ -3920,7 +3936,14 @@
             (data || []).forEach(fila => {
                 if (fila.clave === 'logo_base64' && fila.valor) brandingLogoDataUrl = fila.valor;
                 if (fila.clave === 'favicon_base64' && fila.valor) brandingFaviconDataUrl = fila.valor;
+                if (fila.clave === 'logo_size_px' && fila.valor) brandingLogoSizePx = parseInt(fila.valor, 10) || null;
             });
+            const rango = document.getElementById('rangoTamanoLogo');
+            const valorTexto = document.getElementById('valorTamanoLogo');
+            if (rango && brandingLogoSizePx) {
+                rango.value = brandingLogoSizePx;
+                if (valorTexto) valorTexto.textContent = brandingLogoSizePx;
+            }
             aplicarBranding();
         }
 
@@ -3933,11 +3956,13 @@
 
             const inputLogo = document.getElementById('inputLogoBranding');
             const inputFavicon = document.getElementById('inputFaviconBranding');
+            const rango = document.getElementById('rangoTamanoLogo');
             const archivoLogo = inputLogo.files[0];
             const archivoFavicon = inputFavicon.files[0];
+            const tamanoLogoPx = rango ? parseInt(rango.value, 10) : null;
 
-            if (!archivoLogo && !archivoFavicon) {
-                mostrarAlerta('⚠️ Selecciona al menos un archivo (logo o favicon) antes de guardar', 'error');
+            if (!archivoLogo && !archivoFavicon && !tamanoLogoPx) {
+                mostrarAlerta('⚠️ Selecciona al menos un archivo (logo o favicon) o ajusta el tamaño antes de guardar', 'error');
                 return;
             }
 
@@ -3955,6 +3980,15 @@
                         .upsert({ clave: 'favicon_base64', valor: dataUrl, actualizado_en: new Date().toISOString() });
                     if (error) throw error;
                     brandingFaviconDataUrl = dataUrl;
+                }
+                // El tamaño del logo se guarda siempre que haya control (aunque no
+                // se haya subido un archivo nuevo), para poder achicar/agrandar el
+                // logo actual sin tener que volver a subirlo.
+                if (tamanoLogoPx) {
+                    const { error } = await sb.from('app_branding')
+                        .upsert({ clave: 'logo_size_px', valor: String(tamanoLogoPx), actualizado_en: new Date().toISOString() });
+                    if (error) throw error;
+                    brandingLogoSizePx = tamanoLogoPx;
                 }
             } catch (e) {
                 console.error('Error guardando logo/favicon:', e);
@@ -3979,7 +4013,7 @@
 
             const { error } = await sb.from('app_branding')
                 .update({ valor: null, actualizado_en: new Date().toISOString() })
-                .in('clave', ['logo_base64', 'favicon_base64']);
+                .in('clave', ['logo_base64', 'favicon_base64', 'logo_size_px']);
             if (error) {
                 console.error('Error restaurando logo/favicon:', error);
                 mostrarAlerta('❌ No se pudo restaurar el logo/favicon', 'error');
@@ -3988,6 +4022,7 @@
 
             brandingLogoDataUrl = null;
             brandingFaviconDataUrl = null;
+            brandingLogoSizePx = null;
             location.reload();
         }
 
