@@ -946,8 +946,12 @@
                     <input type="datetime-local" id="editInicioReal">
                 </div>
             </div>
+            <div class="form-group">
+                <label for="editTerminacionReal">Terminación Real (opcional — solo admin)</label>
+                <input type="datetime-local" id="editTerminacionReal">
+            </div>
             <p style="font-size: 0.8rem; color: #6B7280; margin-top: -0.6rem; margin-bottom: 1rem;">
-                Úsalo para corregir la hora real de llegada/inicio cuando el equipo trabajó en un horario distinto al programado (ej. lo hicieron temprano). Déjalos vacíos si no aplica. Los usuarios normales siguen cerrando sus citas con los botones de siempre, sin pasar por aquí.
+                Úsalo para corregir la hora real de llegada/inicio/terminación cuando el equipo trabajó en un horario distinto al programado (ej. lo hicieron temprano). Si llenas Inicio Real y Terminación Real, la <strong>duración se recalcula sola</strong> (descontando almuerzo) y la cita queda marcada como terminada. Déjalos vacíos si no aplica. Los usuarios normales siguen cerrando sus citas con los botones de siempre, sin pasar por aquí.
             </p>
             <div class="form-group">
                 <label for="editNotas">Notas Adicionales *</label>
@@ -1037,7 +1041,7 @@
 
     <footer>
         <p>&copy; 2026 Grupo Dupla | Constructora Dupla • Porto Valencia RD</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 1.7</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 1.8</p>
         <div class="footer-social">
             <a href="https://www.instagram.com/grupodupla/" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grupo Dupla" title="Instagram">
                 <svg viewBox="0 0 24 24"><path d="M12 2c2.72 0 3.06.01 4.12.06 1.07.05 1.79.22 2.43.46.66.25 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.06.06 1.4.06 4.12s-.01 3.06-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.06.05-1.4.06-4.12.06s-3.06-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.06 2 14.72 2 12s.01-3.06.06-4.12c.05-1.07.22-1.79.46-2.43.25-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.5c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.28 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.2-8.4a1.17 1.17 0 1 1 0-2.34 1.17 1.17 0 0 1 0 2.34z"/></svg>
@@ -1202,7 +1206,7 @@
 
         activarEnvioConEnter(['codigoMaestro'], activarModoAdmin);
         activarEnvioConEnter(
-            ['editNombre', 'editProyecto', 'editEquipo', 'editInicio', 'editDuracionHoras', 'editDuracionMinutos', 'editDuracionSegundos', 'editLlegadaReal', 'editInicioReal'],
+            ['editNombre', 'editProyecto', 'editEquipo', 'editInicio', 'editDuracionHoras', 'editDuracionMinutos', 'editDuracionSegundos', 'editLlegadaReal', 'editInicioReal', 'editTerminacionReal'],
             guardarEdicion
         );
         activarEnvioConEnter(['urgNombre', 'urgProyecto', 'urgCodigo'], confirmarUrgencia);
@@ -1938,6 +1942,32 @@
             if (isNaN(d.getTime())) return '';
             const pad = n => String(n).padStart(2, '0');
             return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        // Suma las horas de jornada laboral (descontando almuerzo y horas fuera de
+        // horario, igual que en calcularFinJornada) que realmente caben entre dos
+        // fechas/horas reales. Se usa para calcular la duración automáticamente
+        // cuando el administrador corrige "Inicio Real" y "Terminación Real" a mano.
+        function horasTrabajadasEntre(inicioDate, finDate) {
+            if (!(finDate > inicioDate)) return 0;
+            let total = 0;
+            let cursor = new Date(inicioDate);
+            let guard = 0;
+            while (cursor < finDate && guard < 1000) {
+                guard++;
+                const ventanas = ventanasDelDia(cursor, false);
+                for (const [ini, finV] of ventanas) {
+                    const segIni = cursor > ini ? cursor : ini;
+                    const segFin = finDate < finV ? finDate : finV;
+                    if (segFin > segIni) {
+                        total += (segFin - segIni) / (60 * 60 * 1000);
+                    }
+                }
+                cursor = new Date(cursor);
+                cursor.setDate(cursor.getDate() + 1);
+                cursor.setHours(0, 0, 0, 0);
+            }
+            return Math.round(total * 10000) / 10000;
         }
 
         // Devuelve el inicio de la próxima jornada laboral disponible (saltando domingos)
@@ -2816,6 +2846,7 @@
             document.getElementById('editDuracion').value = cita.duracion || '';
             document.getElementById('editLlegadaReal').value = timestamptzADatetimeLocal(cita.llegada_real);
             document.getElementById('editInicioReal').value = timestamptzADatetimeLocal(cita.inicio_real);
+            document.getElementById('editTerminacionReal').value = timestamptzADatetimeLocal(cita.finalizado_en);
             document.getElementById('editNotas').value = cita.notas || '';
             actualizarCostoEstimadoEdicion();
 
@@ -2839,8 +2870,33 @@
             const proyecto = document.getElementById('editProyecto').value.trim();
             const equipo = document.getElementById('editEquipo').value.trim();
             const inicio = document.getElementById('editInicio').value;
-            const duracion = parseFloat(document.getElementById('editDuracion').value);
+            let duracion = parseFloat(document.getElementById('editDuracion').value);
             const notas = document.getElementById('editNotas').value.trim();
+            const llegadaRealInput = document.getElementById('editLlegadaReal').value;
+            const inicioRealInput = document.getElementById('editInicioReal').value;
+            const terminacionRealInput = document.getElementById('editTerminacionReal').value;
+
+            // Si se llenan Inicio Real y Terminación Real, la duración se calcula
+            // sola a partir de esas dos horas reales (descontando almuerzo y horas
+            // fuera de jornada laboral), en vez de depender de lo escrito a mano
+            // arriba en "Duración". Así la "programación" (duración/costo) queda
+            // consistente en automático con la corrección real que se haga.
+            let duracionRecalculada = false;
+            if (inicioRealInput && terminacionRealInput) {
+                const inicioRealDate = new Date(inicioRealInput);
+                const terminacionRealDate = new Date(terminacionRealInput);
+                if (terminacionRealDate <= inicioRealDate) {
+                    mostrarAlerta('❌ "Terminación Real" debe ser posterior a "Inicio Real"', 'error');
+                    return;
+                }
+                const horasCalculadas = horasTrabajadasEntre(inicioRealDate, terminacionRealDate);
+                if (horasCalculadas <= 0) {
+                    mostrarAlerta('❌ No hay horas de jornada laboral entre esas dos fechas reales (revisa que no caigan fuera del horario laboral)', 'error');
+                    return;
+                }
+                duracion = horasCalculadas;
+                duracionRecalculada = true;
+            }
 
             if (!nombre || !proyecto || !equipo || !inicio || !duracion || !notas) {
                 mostrarAlerta('⚠️ Completa todos los campos requeridos (incluyendo notas)', 'error');
@@ -2864,9 +2920,6 @@
                 return;
             }
 
-            const llegadaRealInput = document.getElementById('editLlegadaReal').value;
-            const inicioRealInput = document.getElementById('editInicioReal').value;
-
             const cambios = {
                 nombre: nombre,
                 proyecto: proyecto,
@@ -2877,11 +2930,14 @@
                 costo: calcularCosto(equipo, duracion),
                 // Solo el administrador llega hasta aquí (este formulario está
                 // detrás de modoAdminActivo): permite corregir la hora real de
-                // llegada/inicio cuando el equipo trabajó en un horario distinto
-                // al programado. Los usuarios normales siguen usando los botones
-                // "Marcar llegada"/"Iniciar labor", que no pasan por aquí.
+                // llegada/inicio/terminación cuando el equipo trabajó en un
+                // horario distinto al programado. Los usuarios normales siguen
+                // usando los botones "Marcar llegada"/"Iniciar labor"/"Terminó su
+                // labor", que no pasan por aquí.
                 llegada_real: llegadaRealInput ? new Date(llegadaRealInput).toISOString() : null,
-                inicio_real: inicioRealInput ? new Date(inicioRealInput).toISOString() : null
+                inicio_real: inicioRealInput ? new Date(inicioRealInput).toISOString() : null,
+                finalizado_en: terminacionRealInput ? new Date(terminacionRealInput).toISOString() : null,
+                trabajo_terminado: !!terminacionRealInput
             };
 
             const { error } = await sb.from('reservas').update(cambios).eq('id', id);
@@ -2894,7 +2950,12 @@
             await recargarCitas();
             actualizarDashboard();
             cerrarModalEdicion();
-            mostrarAlerta('✅ Asignación actualizada correctamente', 'success');
+            mostrarAlerta(
+                duracionRecalculada
+                    ? `✅ Asignación actualizada. Duración real recalculada a ${duracion.toFixed(2)}h a partir de Inicio/Terminación Real.`
+                    : '✅ Asignación actualizada correctamente',
+                'success'
+            );
         }
 
         // Generar reporte mensual y limpiar datos antiguos
