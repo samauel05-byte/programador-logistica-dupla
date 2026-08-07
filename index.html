@@ -1024,7 +1024,7 @@
 
     <footer>
         <p>&copy; 2026 Grupo Dupla | Constructora Dupla • Porto Valencia RD</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 1.4</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 1.5</p>
         <div class="footer-social">
             <a href="https://www.instagram.com/grupodupla/" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grupo Dupla" title="Instagram">
                 <svg viewBox="0 0 24 24"><path d="M12 2c2.72 0 3.06.01 4.12.06 1.07.05 1.79.22 2.43.46.66.25 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.06.06 1.4.06 4.12s-.01 3.06-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.06.05-1.4.06-4.12.06s-3.06-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.06 2 14.72 2 12s.01-3.06.06-4.12c.05-1.07.22-1.79.46-2.43.25-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.5c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.28 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.2-8.4a1.17 1.17 0 1 1 0-2.34 1.17 1.17 0 0 1 0 2.34z"/></svg>
@@ -1247,6 +1247,15 @@
             'GDA-CA-215 Camión (Ramón)',
             'GDA-CA-218 Camión (Arsenio)'
         ];
+
+        // Equipos "pesados" (minicargadores y telehandlers): sujetos a un
+        // mínimo de 16h por solicitud y a un margen de 2 días entre
+        // solicitudes del mismo proyecto, para que no acaparen el equipo y
+        // otros tengan oportunidad de usarlo. Las solicitudes urgentes se
+        // saltan esta regla (ya requieren aprobación manual del coordinador).
+        function esEquipoPesado(equipo) {
+            return equipo.includes('Minicargador') || equipo.includes('Telehandler');
+        }
 
         // Mapa equipo -> true/false (activo individualmente)
         let equiposTemporalesEstado = {};
@@ -1784,6 +1793,35 @@
             await recargarCitas();
 
             const esUrgente = document.getElementById('esUrgente').checked;
+
+            // Regla de equipos pesados (minicargador/telehandler): mínimo 16h
+            // por solicitud y 2 días de margen entre solicitudes del mismo
+            // proyecto, salvo que sea urgente (ahí decide el coordinador).
+            if (esEquipoPesado(equipo) && !esUrgente) {
+                if (duracion < 16) {
+                    mostrarAlerta(`❌ "${equipo}" es un equipo pesado: cada solicitud debe ser de al menos 16 horas. Marca "Es urgente" si necesitas menos tiempo y que lo apruebe el coordinador.`, 'error');
+                    return;
+                }
+
+                const nuevoInicio = new Date(inicio);
+                const nuevoFin = calcularFinJornada(nuevoInicio, duracion, false);
+                const DOS_DIAS_MS = 2 * 24 * 60 * 60 * 1000;
+
+                const solicitudReciente = citasCache.find(c => {
+                    if (!esEquipoPesado(c.equipo)) return false;
+                    if ((c.proyecto || '').trim().toLowerCase() !== proyecto.toLowerCase()) return false;
+                    const cInicio = inicioEfectivo(c);
+                    const cFin = c.finalizado_en ? new Date(c.finalizado_en) : finEstimado(c);
+                    if (cFin <= nuevoInicio) return (nuevoInicio - cFin) < DOS_DIAS_MS;
+                    if (nuevoFin <= cInicio) return (cInicio - nuevoFin) < DOS_DIAS_MS;
+                    return false; // se solapan: ya lo maneja buscarConflictos más abajo
+                });
+
+                if (solicitudReciente) {
+                    mostrarAlerta(`❌ El proyecto "${proyecto}" ya usó un equipo pesado (${solicitudReciente.equipo}) muy cerca de esta fecha. Debe pasar al menos 2 días entre solicitudes de equipo pesado del mismo proyecto para darle chance a otros. Marca "Es urgente" si de verdad lo necesitas antes.`, 'error');
+                    return;
+                }
+            }
 
             // Verificar conflictos (todas las citas que se solapan, no solo la primera)
             const conflictos = buscarConflictos(equipo, inicio, duracion, null, esUrgente);
