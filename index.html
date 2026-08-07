@@ -936,6 +936,19 @@
                     —
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editLlegadaReal">Llegada Real (opcional — solo admin)</label>
+                    <input type="datetime-local" id="editLlegadaReal">
+                </div>
+                <div class="form-group">
+                    <label for="editInicioReal">Inicio Real (opcional — solo admin)</label>
+                    <input type="datetime-local" id="editInicioReal">
+                </div>
+            </div>
+            <p style="font-size: 0.8rem; color: #6B7280; margin-top: -0.6rem; margin-bottom: 1rem;">
+                Úsalo para corregir la hora real de llegada/inicio cuando el equipo trabajó en un horario distinto al programado (ej. lo hicieron temprano). Déjalos vacíos si no aplica. Los usuarios normales siguen cerrando sus citas con los botones de siempre, sin pasar por aquí.
+            </p>
             <div class="form-group">
                 <label for="editNotas">Notas Adicionales *</label>
                 <textarea id="editNotas"></textarea>
@@ -1024,7 +1037,7 @@
 
     <footer>
         <p>&copy; 2026 Grupo Dupla | Constructora Dupla • Porto Valencia RD</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 1.6</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 1.7</p>
         <div class="footer-social">
             <a href="https://www.instagram.com/grupodupla/" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grupo Dupla" title="Instagram">
                 <svg viewBox="0 0 24 24"><path d="M12 2c2.72 0 3.06.01 4.12.06 1.07.05 1.79.22 2.43.46.66.25 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.06.06 1.4.06 4.12s-.01 3.06-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.06.05-1.4.06-4.12.06s-3.06-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.06 2 14.72 2 12s.01-3.06.06-4.12c.05-1.07.22-1.79.46-2.43.25-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.5c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.28 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.2-8.4a1.17 1.17 0 1 1 0-2.34 1.17 1.17 0 0 1 0 2.34z"/></svg>
@@ -1189,7 +1202,7 @@
 
         activarEnvioConEnter(['codigoMaestro'], activarModoAdmin);
         activarEnvioConEnter(
-            ['editNombre', 'editProyecto', 'editEquipo', 'editInicio', 'editDuracionHoras', 'editDuracionMinutos', 'editDuracionSegundos'],
+            ['editNombre', 'editProyecto', 'editEquipo', 'editInicio', 'editDuracionHoras', 'editDuracionMinutos', 'editDuracionSegundos', 'editLlegadaReal', 'editInicioReal'],
             guardarEdicion
         );
         activarEnvioConEnter(['urgNombre', 'urgProyecto', 'urgCodigo'], confirmarUrgencia);
@@ -1913,6 +1926,18 @@
             const minutos = Math.round((horaDecimal - horas) * 60);
             d.setHours(horas, minutos, 0, 0);
             return d;
+        }
+
+        // Convierte un timestamp (timestamptz de Supabase, ej. llegada_real/inicio_real)
+        // al formato que espera un <input type="datetime-local"> (hora local del
+        // navegador), y viceversa. Se usa en el modal de edición de admin para poder
+        // corregir la hora real de llegada/inicio a mano.
+        function timestamptzADatetimeLocal(valor) {
+            if (!valor) return '';
+            const d = new Date(valor);
+            if (isNaN(d.getTime())) return '';
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
         }
 
         // Devuelve el inicio de la próxima jornada laboral disponible (saltando domingos)
@@ -2789,6 +2814,8 @@
             document.getElementById('editDuracionMinutos').value = minutosPart || '';
             document.getElementById('editDuracionSegundos').value = segundosPart || '';
             document.getElementById('editDuracion').value = cita.duracion || '';
+            document.getElementById('editLlegadaReal').value = timestamptzADatetimeLocal(cita.llegada_real);
+            document.getElementById('editInicioReal').value = timestamptzADatetimeLocal(cita.inicio_real);
             document.getElementById('editNotas').value = cita.notas || '';
             actualizarCostoEstimadoEdicion();
 
@@ -2837,6 +2864,9 @@
                 return;
             }
 
+            const llegadaRealInput = document.getElementById('editLlegadaReal').value;
+            const inicioRealInput = document.getElementById('editInicioReal').value;
+
             const cambios = {
                 nombre: nombre,
                 proyecto: proyecto,
@@ -2844,7 +2874,14 @@
                 inicio: inicio,
                 duracion: duracion,
                 notas: notas,
-                costo: calcularCosto(equipo, duracion)
+                costo: calcularCosto(equipo, duracion),
+                // Solo el administrador llega hasta aquí (este formulario está
+                // detrás de modoAdminActivo): permite corregir la hora real de
+                // llegada/inicio cuando el equipo trabajó en un horario distinto
+                // al programado. Los usuarios normales siguen usando los botones
+                // "Marcar llegada"/"Iniciar labor", que no pasan por aquí.
+                llegada_real: llegadaRealInput ? new Date(llegadaRealInput).toISOString() : null,
+                inicio_real: inicioRealInput ? new Date(inicioRealInput).toISOString() : null
             };
 
             const { error } = await sb.from('reservas').update(cambios).eq('id', id);
