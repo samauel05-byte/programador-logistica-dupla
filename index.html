@@ -1024,7 +1024,7 @@
 
     <footer>
         <p>&copy; 2026 Grupo Dupla | Constructora Dupla • Porto Valencia RD</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 1.3</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 1.4</p>
         <div class="footer-social">
             <a href="https://www.instagram.com/grupodupla/" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grupo Dupla" title="Instagram">
                 <svg viewBox="0 0 24 24"><path d="M12 2c2.72 0 3.06.01 4.12.06 1.07.05 1.79.22 2.43.46.66.25 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.06.06 1.4.06 4.12s-.01 3.06-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.06.05-1.4.06-4.12.06s-3.06-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.06 2 14.72 2 12s.01-3.06.06-4.12c.05-1.07.22-1.79.46-2.43.25-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.5c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.28 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.2-8.4a1.17 1.17 0 1 1 0-2.34 1.17 1.17 0 0 1 0 2.34z"/></svg>
@@ -1166,6 +1166,35 @@
         document.getElementById('inicio').addEventListener('input', verificarDisponibilidadEnVivo);
         document.getElementById('duracion').addEventListener('input', verificarDisponibilidadEnVivo);
         document.getElementById('esUrgente').addEventListener('change', verificarDisponibilidadEnVivo);
+
+        // El único <form> real de la página es "citaForm" (Programar Asignación),
+        // así que Enter ya funciona ahí solo. El resto de los campos (Código
+        // Maestro, los modales de Editar/Urgencia/Pausa, y el rango del reporte)
+        // son inputs sueltos fuera de cualquier <form>, así que Enter no hacía
+        // nada en ellos. Esto conecta Enter en cada uno con el mismo botón de
+        // acción principal de esa sección (se ignora en <textarea>, donde Enter
+        // debe seguir insertando un salto de línea).
+        function activarEnvioConEnter(idsCampos, accion) {
+            idsCampos.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && el.tagName !== 'TEXTAREA') {
+                        e.preventDefault();
+                        accion();
+                    }
+                });
+            });
+        }
+
+        activarEnvioConEnter(['codigoMaestro'], activarModoAdmin);
+        activarEnvioConEnter(
+            ['editNombre', 'editProyecto', 'editEquipo', 'editInicio', 'editDuracionHoras', 'editDuracionMinutos', 'editDuracionSegundos'],
+            guardarEdicion
+        );
+        activarEnvioConEnter(['urgNombre', 'urgProyecto', 'urgCodigo'], confirmarUrgencia);
+        activarEnvioConEnter(['pausaNota'], confirmarPausa);
+        activarEnvioConEnter(['reporteDesde', 'reporteHasta'], generarReporte);
 
         const citaForm = document.getElementById('citaForm');
         const alertBox = document.getElementById('alert');
