@@ -1066,7 +1066,7 @@
 
     <footer>
         <p>&copy; 2026 Grupo Dupla | Constructora Dupla • Porto Valencia</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 2.5</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Programador de Logística de Equipos Pesados • Versión SamKill 2.6</p>
         <div class="footer-social">
             <a href="https://www.instagram.com/grupodupla/" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grupo Dupla" title="Instagram">
                 <svg viewBox="0 0 24 24"><path d="M12 2c2.72 0 3.06.01 4.12.06 1.07.05 1.79.22 2.43.46.66.25 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.24.64.41 1.36.46 2.43.05 1.06.06 1.4.06 4.12s-.01 3.06-.06 4.12c-.05 1.07-.22 1.79-.46 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.24-1.36.41-2.43.46-1.06.05-1.4.06-4.12.06s-3.06-.01-4.12-.06c-1.07-.05-1.79-.22-2.43-.46a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.24-.64-.41-1.36-.46-2.43C2.01 15.06 2 14.72 2 12s.01-3.06.06-4.12c.05-1.07.22-1.79.46-2.43.25-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.44 2.5c.64-.24 1.36-.41 2.43-.46C8.94 2.01 9.28 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.2-8.4a1.17 1.17 0 1 1 0-2.34 1.17 1.17 0 0 1 0 2.34z"/></svg>
@@ -1849,12 +1849,14 @@
 
             const esUrgente = document.getElementById('esUrgente').checked;
 
-            // Regla de equipos pesados (minicargador/telehandler): mínimo 16h
-            // por solicitud y 2 días de margen entre solicitudes del mismo
-            // proyecto, salvo que sea urgente (ahí decide el coordinador).
+            // Regla de equipos pesados (minicargador/telehandler): cada
+            // solicitud debe ser de exactamente 16h (ni más ni menos), para
+            // que el equipo tenga rejuego entre proyectos. 2 días de margen
+            // entre solicitudes del mismo proyecto. Salvo que sea urgente
+            // (ahí decide el coordinador).
             if (esEquipoPesado(equipo) && !esUrgente) {
-                if (duracion < 16) {
-                    mostrarAlerta(`❌ "${equipo}" es un equipo pesado: cada solicitud debe ser de al menos 16 horas. Marca "Es urgente" si necesitas menos tiempo y que lo apruebe el coordinador.`, 'error');
+                if (duracion !== 16) {
+                    mostrarAlerta(`❌ "${equipo}" es un equipo pesado: cada solicitud debe ser de exactamente 16 horas (ni más ni menos), para que haya rejuego con otros proyectos. Marca "Es urgente" si necesitas otra duración y que lo apruebe el coordinador.`, 'error');
                     return;
                 }
 
