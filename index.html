@@ -254,16 +254,45 @@
         }
 
         .alert {
-            padding: 1rem;
-            border-radius: 6px;
-            margin-bottom: 1.5rem;
+            position: fixed;
+            top: 1.25rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            width: min(92vw, 640px);
+            padding: 1.25rem 1.5rem;
+            border-radius: 10px;
             display: none;
-            border-left: 4px solid;
-            animation: slideIn 0.3s ease;
+            border-left: 6px solid;
+            font-size: 1.2rem;
+            font-weight: 700;
+            line-height: 1.4;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            animation: alertSlideIn 0.3s ease;
         }
 
         .alert.show {
             display: block;
+        }
+
+        @keyframes alertSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .alert {
+                width: 92vw;
+                font-size: 1.05rem;
+                padding: 1rem 1.25rem;
+            }
         }
 
         .alert-success {
@@ -1756,9 +1785,8 @@
         function mostrarAlerta(mensaje, tipo = 'success') {
             alertBox.textContent = mensaje;
             alertBox.className = `alert show alert-${tipo}`;
-            // Aseguramos que la alerta quede visible sin importar dónde esté
-            // desplazado el usuario en la página (ej: si venía de abajo del todo).
-            alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // El aviso queda fijo arriba de la pantalla, así que siempre es visible
+            // sin importar dónde esté desplazado el usuario en la página.
             setTimeout(() => {
                 alertBox.classList.remove('show');
             }, 4000);
