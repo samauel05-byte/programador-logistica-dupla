@@ -1452,8 +1452,15 @@
                 ? '<option value="" disabled selected>Selecciona un equipo...</option>'
                 : '<option value="" disabled selected>Primero selecciona un proyecto...</option>';
             select.disabled = !hayProyecto;
+
+            // Solo cuentan como "válidas para conservar" las que de verdad se agregan
+            // como <option> al select (equiposActivos incluye también los que están
+            // fuera de servicio y se ocultan para usuarios normales más abajo).
+            const opcionesAgregadas = new Set();
             equiposActivos.forEach(equipo => {
                 if (estaFueraDeServicio(equipo) && !modoAdminActivo) return;
+                opcionesAgregadas.add(equipo);
+
                 const opt = document.createElement('option');
                 opt.value = equipo;
                 datalist.appendChild(opt);
@@ -1464,8 +1471,13 @@
                 select.appendChild(selectOpt);
             });
 
-            if (hayProyecto && seleccionPrevia && equiposActivos.includes(seleccionPrevia)) {
+            if (hayProyecto && seleccionPrevia && opcionesAgregadas.has(seleccionPrevia)) {
                 select.value = seleccionPrevia;
+            } else if (seleccionPrevia && !opcionesAgregadas.has(seleccionPrevia)) {
+                // El equipo que tenía elegido dejó de estar disponible (ej: alguien lo
+                // marcó fuera de servicio mientras llenaba el formulario) — se lo avisamos
+                // en vez de dejar el campo vacío sin explicación.
+                mostrarAlerta(`⚠️ "${seleccionPrevia}" ya no está disponible y se quitó de tu selección. Elige otro equipo.`, 'error');
             }
         }
 
