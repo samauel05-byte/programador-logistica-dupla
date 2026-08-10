@@ -808,7 +808,31 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="proyecto">Proyecto *</label>
-                        <input type="text" id="proyecto" list="proyectosList" placeholder="Elige o escribe el proyecto..." autocomplete="off" required>
+                        <select id="proyecto" required>
+                            <option value="" disabled selected>Selecciona un proyecto...</option>
+                            <option value="HACIENDA A4">HACIENDA A4</option>
+                            <option value="HACIENDA A5">HACIENDA A5</option>
+                            <option value="HACIENDA A7">HACIENDA A7</option>
+                            <option value="HACIENDA A8">HACIENDA A8</option>
+                            <option value="HACIENDA A73">HACIENDA A73</option>
+                            <option value="HACIENDA A79">HACIENDA A79</option>
+                            <option value="HACIENDA C24">HACIENDA C24</option>
+                            <option value="HACIENDA C26">HACIENDA C26</option>
+                            <option value="HACIENDA C36-37">HACIENDA C36-37</option>
+                            <option value="HACIENDA B46">HACIENDA B46</option>
+                            <option value="HACIENDA DEL MAR 4">HACIENDA DEL MAR 4</option>
+                            <option value="SERENA 20">SERENA 20</option>
+                            <option value="MANGLE 22">MANGLE 22</option>
+                            <option value="CANOA 14">CANOA 14</option>
+                            <option value="CANOA 26">CANOA 26</option>
+                            <option value="NASAS 9">NASAS 9</option>
+                            <option value="PAYAO 10">PAYAO 10</option>
+                            <option value="CORALES 80">CORALES 80</option>
+                            <option value="CORALES 81">CORALES 81</option>
+                            <option value="CORALES 47">CORALES 47</option>
+                            <option value="CORALES 78">CORALES 78</option>
+                        </select>
+                        <!-- Datalist de respaldo para el campo de edición del admin (editProyecto). -->
                         <datalist id="proyectosList">
                             <option value="HACIENDA A4"></option>
                             <option value="HACIENDA A5"></option>
