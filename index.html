@@ -1854,9 +1854,32 @@
             alertBox.className = `alert show alert-${tipo}`;
             // El aviso queda fijo arriba de la pantalla, así que siempre es visible
             // sin importar dónde esté desplazado el usuario en la página.
+            reposicionarAvisoDisponibilidad();
             setTimeout(() => {
                 alertBox.classList.remove('show');
+                reposicionarAvisoDisponibilidad();
             }, 4000);
+        }
+
+        // El banner de éxito/error (#alert) y el aviso de disponibilidad en vivo
+        // (#avisoDisponibilidad) son ambos fijos y centrados arriba de la pantalla.
+        // Si los dos están visibles al mismo tiempo (ej: un error de validación
+        // mientras el equipo elegido ya está reservado), se superpondrían y
+        // quedarían ilegibles. Por eso el aviso se corre debajo del alert cuando
+        // este último está visible, y vuelve a su posición normal cuando no.
+        function reposicionarAvisoDisponibilidad() {
+            const aviso = document.getElementById('avisoDisponibilidad');
+            if (!aviso) return;
+            if (alertBox.classList.contains('show')) {
+                // No usamos getBoundingClientRect() aquí: justo al mostrarse, el alert
+                // todavía está a mitad de su animación de entrada (translateY), así
+                // que su posición visual momentánea no es la real. El "top" declarado
+                // y "offsetHeight" sí son inmediatos y no los afecta esa animación.
+                const alertTop = parseFloat(getComputedStyle(alertBox).top) || 0;
+                aviso.style.top = (alertTop + alertBox.offsetHeight + 12) + 'px';
+            } else {
+                aviso.style.top = '';
+            }
         }
 
         // Marca el campo "equipo" como inválido y muestra un mensaje justo debajo,
@@ -2396,6 +2419,10 @@
             const aviso = document.getElementById('avisoDisponibilidad');
             const grupoAprobacion = document.getElementById('urgenciaAprobacionGroup');
             if (!aviso) return;
+
+            // Por si el banner de éxito/error (#alert) está visible en este momento,
+            // así el aviso no le queda montado encima cuando se muestre.
+            reposicionarAvisoDisponibilidad();
 
             const equipo = document.getElementById('equipo').value.trim();
             const inicio = document.getElementById('inicio').value;
