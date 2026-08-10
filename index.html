@@ -1944,6 +1944,25 @@
 
             const esUrgente = document.getElementById('esUrgente').checked;
 
+            // Límite de 3 solicitudes urgentes por semana por persona (rodante:
+            // últimos 7 días desde que se crea cada solicitud), para que "urgente"
+            // no se use como atajo habitual y pierda su sentido.
+            if (esUrgente) {
+                const SIETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
+                const ahora = Date.now();
+                const urgentesRecientes = citasCache.filter(c =>
+                    c.urgente &&
+                    (c.nombre || '').trim().toLowerCase() === nombre.toLowerCase() &&
+                    c.created_at &&
+                    (ahora - new Date(c.created_at).getTime()) < SIETE_DIAS_MS
+                ).length;
+
+                if (urgentesRecientes >= 3) {
+                    mostrarAlerta(`🚨 "${nombre}" ya alcanzó el límite de 3 solicitudes urgentes esta semana. Contacta al coordinador si de verdad necesitas otra.`, 'error');
+                    return;
+                }
+            }
+
             // Regla de equipos pesados (minicargador/telehandler): cada
             // solicitud puede ser de hasta 16h como máximo (menos de 16 sí se
             // permite), para que el equipo tenga rejuego entre proyectos. 2
