@@ -2036,7 +2036,7 @@
                 const c = conflictos[0];
                 const inicioFormato = new Date(c.inicio).toLocaleString('es-DO');
                 if (estaVencidaSinTerminar(c)) {
-                    mostrarAlerta(`❌ El equipo "${equipo}" sigue en uso desde ${inicioFormato} (Proyecto: ${c.proyecto}) — su turno venció pero nadie lo ha marcado "Terminó su labor". Marca "Es urgente" si necesitas aplazar esa reserva.`, 'error');
+                    mostrarAlerta(`❌ El equipo "${equipo}" sigue en uso desde ${inicioFormato} (Proyecto: ${c.proyecto}) — su turno venció pero nadie lo ha marcado "Terminó". Marca "Es urgente" si necesitas aplazar esa reserva.`, 'error');
                 } else {
                     const finFormato = finEstimado(c).toLocaleString('es-DO');
                     mostrarAlerta(`❌ El equipo "${equipo}" ya está reservado desde ${inicioFormato} hasta ${finFormato} (Proyecto: ${c.proyecto}). Marca "Es urgente" si necesitas aplazar esa reserva.`, 'error');
@@ -2414,7 +2414,7 @@
                     if (fechaInicio < citaFin && fechaFin > citaInicio) {
                         const inicioFormato = citaInicio.toLocaleString('es-DO');
                         if (estaVencidaSinTerminar(cita)) {
-                            return `El equipo "${equipo}" sigue en uso desde ${inicioFormato} (Proyecto: ${cita.proyecto}) — su turno ya venció pero nadie lo ha marcado como "Terminó su labor", así que sigue bloqueado`;
+                            return `El equipo "${equipo}" sigue en uso desde ${inicioFormato} (Proyecto: ${cita.proyecto}) — su turno ya venció pero nadie lo ha marcado como "Terminó", así que sigue bloqueado`;
                         }
                         const finFormato = citaFin.toLocaleString('es-DO');
                         return `El equipo "${equipo}" ya está reservado desde ${inicioFormato} hasta ${finFormato} (Proyecto: ${cita.proyecto})`;
@@ -2471,7 +2471,7 @@
                     const c = conflictos[0];
                     const inicioFormato = new Date(c.inicio).toLocaleString('es-DO');
                     if (estaVencidaSinTerminar(c)) {
-                        aviso.textContent = `🟠 El equipo "${equipo}" sigue en uso desde ${inicioFormato} (Proyecto: ${c.proyecto}) — su turno ya venció pero nadie lo ha marcado "Terminó su labor", así que sigue bloqueado. Elige otro equipo, espera a que lo marquen terminado, o marca "Es urgente" para aplazarla.`;
+                        aviso.textContent = `🟠 El equipo "${equipo}" sigue en uso desde ${inicioFormato} (Proyecto: ${c.proyecto}) — su turno ya venció pero nadie lo ha marcado "Terminó", así que sigue bloqueado. Elige otro equipo, espera a que lo marquen terminado, o marca "Es urgente" para aplazarla.`;
                     } else {
                         const finFormato = finEstimado(c).toLocaleString('es-DO');
                         aviso.textContent = `🟠 El equipo "${equipo}" ya está reservado desde ${inicioFormato} hasta ${finFormato} (Proyecto: ${c.proyecto}). Elige otro horario o equipo, o marca "Es urgente" para aplazarla.`;
@@ -2602,7 +2602,7 @@
                             const minutosExtra = Math.ceil((ahora - finPlanificado) / (1000 * 60));
                             const horasExtra = Math.floor(minutosExtra / 60);
                             const minExtra = minutosExtra % 60;
-                            tiempoRestante = `⏰ Vencido hace ${horasExtra > 0 ? horasExtra + 'h ' : ''}${minExtra}m — falta marcar "Terminó su labor"`;
+                            tiempoRestante = `⏰ Vencido hace ${horasExtra > 0 ? horasExtra + 'h ' : ''}${minExtra}m — falta marcar "Terminó"`;
                         }
                     }
                 }
