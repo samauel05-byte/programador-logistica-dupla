@@ -2689,7 +2689,7 @@
                                                         }
                                                         let bloque = `<span style="display:block; font-size:0.8rem; color:#374151; margin-bottom:0.4rem;">📍 Llegó: ${horaCorta(cita.llegada_real)}${cita.inicio_real ? ` · ▶️ Inicio: ${horaCorta(cita.inicio_real)}` : ''}</span>`;
                                                         if (!cita.inicio_real) {
-                                                            bloque += `<button onclick="iniciarLabor('${cita.id}')" style="padding: 0.4rem 0.7rem; font-size: 0.8rem; font-weight: 600; background: #2563EB; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 0.4rem;">▶️ Iniciar labor</button>`;
+                                                            bloque += `<button onclick="iniciarLabor('${cita.id}')" style="padding: 0.4rem 0.7rem; font-size: 0.8rem; font-weight: 600; background: #2563EB; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 0.4rem;">▶️ Iniciar</button>`;
                                                             return bloque;
                                                         }
                                                         if (pausaActiva) {
@@ -2697,7 +2697,7 @@
                                                             bloque += `<span style="display:inline-block; font-size:0.75rem; font-weight:700; padding:0.2rem 0.5rem; border-radius:4px; color:white; background:#D97706; margin-bottom:0.4rem;">⏸️ Pausado: ${motivoTexto} desde ${horaCorta(pausaActiva.inicio)}</span><br>`;
                                                             bloque += `<button onclick="reanudarEquipo('${cita.id}')" style="padding: 0.4rem 0.7rem; font-size: 0.8rem; font-weight: 600; background: #10B981; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 0.4rem;">▶️ Reanudar</button>`;
                                                         } else {
-                                                            bloque += `<button onclick="abrirModalPausa('${cita.id}')" style="padding: 0.4rem 0.7rem; font-size: 0.8rem; font-weight: 600; background: #D97706; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 0.4rem;">⏸️ Pausar equipo</button>`;
+                                                            bloque += `<button onclick="abrirModalPausa('${cita.id}')" style="padding: 0.4rem 0.7rem; font-size: 0.8rem; font-weight: 600; background: #D97706; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 0.4rem;">⏸️ Pausar</button>`;
                                                         }
                                                         if (horasPausadasTotal > 0) {
                                                             bloque += `<span style="display:block; font-size:0.75rem; color:#6B7280; margin-bottom:0.4rem;">⏸️ Pausas registradas: ${horasPausadasTotal.toFixed(1)}h</span>`;
@@ -2706,7 +2706,7 @@
                                                     })()}
                                                     ${enAlmuerzoAuto ? `<span style="display:inline-block; font-size:0.75rem; font-weight:700; padding:0.2rem 0.5rem; border-radius:4px; color:white; background:#059669; margin-bottom:0.4rem;">🍽️ Hora de almuerzo (12:00pm-1:00pm) — el equipo se pausa automáticamente</span><br>` : ''}
                                                     ${vencidaSinTerminar ? `<span style="display:inline-block; font-size:0.75rem; font-weight:700; padding:0.2rem 0.5rem; border-radius:4px; color:white; background:#D97706; margin-bottom:0.4rem;">⏰ Turno vencido — siguiente reserva aplazada hasta marcar terminado</span><br>` : ''}
-                                                    <button onclick="marcarTrabajoTerminado('${cita.id}')" style="padding: 0.4rem 0.7rem; font-size: 0.8rem; font-weight: 600; background: #10B981; color: white; border: none; border-radius: 4px; cursor: pointer;">✅ Terminó su labor</button>
+                                                    <button onclick="marcarTrabajoTerminado('${cita.id}')" style="padding: 0.4rem 0.7rem; font-size: 0.8rem; font-weight: 600; background: #10B981; color: white; border: none; border-radius: 4px; cursor: pointer;">✅ Terminó</button>
                                                 </div>
                                             ` : ''}
                                             ${modoAdminActivo && cita.urgente_pendiente_aprobacion ? `
