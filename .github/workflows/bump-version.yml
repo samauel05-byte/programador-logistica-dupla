@@ -18,33 +18,48 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Bump SamKill version in index.html
+      - name: Bump y push (con reintento por si hay carreras con otro push)
         run: |
           set -euo pipefail
-
-          current=$(grep -oP 'SamKill \K[0-9]+\.[0-9]+' index.html | head -n1)
-          if [ -z "$current" ]; then
-            echo "No se encontró el texto 'SamKill X.X' en index.html, no se hace nada."
-            exit 0
-          fi
-
-          major=$(echo "$current" | cut -d. -f1)
-          minor=$(echo "$current" | cut -d. -f2)
-          next="$major.$((minor + 1))"
-
-          sed -i "s/SamKill $current/SamKill $next/" index.html
-          echo "Versión actualizada: $current -> $next"
-
-          echo "NEXT_VERSION=$next" >> "$GITHUB_ENV"
-
-      - name: Commit y push
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet; then
-            echo "Sin cambios que commitear."
-            exit 0
-          fi
-          git add index.html
-          git commit -m "Auto-bump version to SamKill ${NEXT_VERSION} [auto-version]"
-          git push
+
+          # Si dos pushes a main tocan index.html casi al mismo tiempo, pueden
+          # correr dos ejecuciones de este workflow en paralelo. Sin reintento,
+          # el segundo "git push" se rechaza (non-fast-forward) y ese bump de
+          # version se pierde. Por eso, ante un push fallido, se vuelve a traer
+          # lo mas reciente de main y se recalcula el bump desde ahi.
+          for intento in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            current=$(grep -oP 'SamKill \K[0-9]+\.[0-9]+' index.html | head -n1)
+            if [ -z "$current" ]; then
+              echo "No se encontró el texto 'SamKill X.X' en index.html, no se hace nada."
+              exit 0
+            fi
+
+            major=$(echo "$current" | cut -d. -f1)
+            minor=$(echo "$current" | cut -d. -f2)
+            next="$major.$((minor + 1))"
+
+            sed -i "s/SamKill $current/SamKill $next/" index.html
+
+            if git diff --quiet; then
+              echo "Sin cambios que commitear."
+              exit 0
+            fi
+
+            git add index.html
+            git commit -m "Auto-bump version to SamKill ${next} [auto-version]"
+
+            if git push; then
+              echo "Versión actualizada: $current -> $next"
+              exit 0
+            fi
+
+            echo "Push falló (intento $intento de 5), reintentando con lo más reciente de main..."
+          done
+
+          echo "No se pudo actualizar la versión tras varios intentos (carrera con otro push)."
+          exit 1
