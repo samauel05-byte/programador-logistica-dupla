@@ -2268,15 +2268,27 @@
             return finEstimado(cita) <= new Date();
         }
 
+        // Margen de gracia: si el horario planificado venció y nadie marcó "Terminó",
+        // el equipo se sigue bloqueando por si el trabajo real se atrasó un poco —
+        // pero solo durante estas horas. Pasado ese margen, se libera automáticamente
+        // para no dejarlo bloqueado para siempre solo porque a alguien se le olvidó
+        // marcarlo (ej: no se puede reservar "pasado mañana" solo porque hoy nadie
+        // apretó "Terminó"). El aviso de "Vencido — falta marcar Terminó" se sigue
+        // mostrando igual, esto solo afecta si el equipo se puede volver a reservar.
+        const MARGEN_GRACIA_HORAS = 3;
+
         // Fin "real" de una cita para efectos de bloquear el horario del equipo:
         // - Si ya fue marcada como terminada, se usa la hora real en que terminó.
-        // - Si su horario planificado ya venció pero nadie la marcó terminada,
-        //   se trata como si no tuviera fin conocido todavía (bloquea cualquier
-        //   siguiente reserva del mismo equipo, aplazándola indefinidamente).
+        // - Si su horario planificado ya venció pero nadie la marcó terminada, se
+        //   trata como si no tuviera fin conocido todavía (bloquea cualquier
+        //   siguiente reserva del mismo equipo) — pero solo mientras esté dentro del
+        //   margen de gracia; pasado ese margen, se usa el fin planificado + margen
+        //   como fin efectivo, liberando el equipo automáticamente.
         // - Si no, se usa el fin estimado (desde inicio_real si ya empezó, o desde
         //   la hora programada si todavía no).
         // Fecha "centinela" que representa que no se conoce el fin de una cita todavía
-        // (equipo bloqueado indefinidamente hasta que alguien marque "Terminó").
+        // (equipo bloqueado hasta que alguien marque "Terminó" o hasta que se cumpla
+        // el margen de gracia, lo que pase primero).
         // Cualquier código que reciba esto de finParaConflictos debe tratarlo como "no
         // reprogramar nada todavía" — NUNCA usarlo como base para calcular una nueva
         // hora real, porque produce fechas absurdas (años en el futuro).
@@ -2284,7 +2296,10 @@
 
         function finParaConflictos(cita) {
             if (cita.finalizado_en) return new Date(cita.finalizado_en);
-            if (estaVencidaSinTerminar(cita)) return SIN_FIN_CONOCIDO;
+            if (estaVencidaSinTerminar(cita)) {
+                const limiteGracia = new Date(finEstimado(cita).getTime() + MARGEN_GRACIA_HORAS * 60 * 60 * 1000);
+                return new Date() < limiteGracia ? SIN_FIN_CONOCIDO : limiteGracia;
+            }
             return finEstimado(cita);
         }
 
