@@ -2261,7 +2261,7 @@
         }
 
         // ¿La cita ya debería haber terminado según lo planificado, pero nadie
-        // presionó "Terminó su labor" todavía? Mientras esto sea true, el equipo
+        // presionó "Terminó" todavía? Mientras esto sea true, el equipo
         // se sigue considerando ocupado más allá de su duración planificada.
         function estaVencidaSinTerminar(cita) {
             if (cita.trabajo_terminado) return false;
@@ -2276,7 +2276,7 @@
         // - Si no, se usa el fin estimado (desde inicio_real si ya empezó, o desde
         //   la hora programada si todavía no).
         // Fecha "centinela" que representa que no se conoce el fin de una cita todavía
-        // (equipo bloqueado indefinidamente hasta que alguien marque "Terminó su labor").
+        // (equipo bloqueado indefinidamente hasta que alguien marque "Terminó").
         // Cualquier código que reciba esto de finParaConflictos debe tratarlo como "no
         // reprogramar nada todavía" — NUNCA usarlo como base para calcular una nueva
         // hora real, porque produce fechas absurdas (años en el futuro).
@@ -2511,7 +2511,7 @@
                     .filter(c => {
                         // Mantener las citas que aún no han sido marcadas como terminadas
                         // (en uso, vencidas-sin-terminar, o futuras). Las que ya se marcaron
-                        // "Terminó su labor" se ocultan de la tarjeta pero permanecen en la base de datos.
+                        // "Terminó" se ocultan de la tarjeta pero permanecen en la base de datos.
                         return !c.trabajo_terminado;
                     })
                     .sort((a, b) => new Date(a.inicio) - new Date(b.inicio));
@@ -2562,7 +2562,7 @@
                         // Ya empezó su horario programado pero todavía nadie ha marcado
                         // "Llegada a obra": el equipo NO está realmente en uso todavía
                         // (nada ha empezado a correr de verdad), así que no se muestra
-                        // como "Vencido — falta marcar Terminó su labor" (eso implicaría
+                        // como "Vencido — falta marcar Terminó" (eso implicaría
                         // que ya trabajó). En vez de eso, se avisa que está pendiente de
                         // llegada y cuánto tiempo de retraso lleva.
                         estadoActual = 'Pendiente de Llegada';
@@ -3130,8 +3130,8 @@
                 // detrás de modoAdminActivo): permite corregir la hora real de
                 // llegada/inicio/terminación cuando el equipo trabajó en un
                 // horario distinto al programado. Los usuarios normales siguen
-                // usando los botones "Marcar llegada"/"Iniciar labor"/"Terminó su
-                // labor", que no pasan por aquí.
+                // usando los botones "Marcar llegada"/"Iniciar"/"Terminó",
+                // que no pasan por aquí.
                 llegada_real: llegadaRealInput ? new Date(llegadaRealInput).toISOString() : null,
                 inicio_real: inicioRealInput ? new Date(inicioRealInput).toISOString() : null,
                 finalizado_en: terminacionRealInput ? new Date(terminacionRealInput).toISOString() : null,
@@ -3272,9 +3272,9 @@
             // (duracion larga), se reparte en un segmento por dia, y el costo se
             // prorratea segun las horas que caen en cada segmento.
             //
-            // Las horas SOLO empiezan a correr cuando se marca "Iniciar labor"
+            // Las horas SOLO empiezan a correr cuando se marca "Iniciar"
             // (inicio_real), no desde la hora programada de la solicitud (cita.inicio).
-            // Si nunca se marcó "Iniciar labor", no hubo trabajo real registrado, así
+            // Si nunca se marcó "Iniciar", no hubo trabajo real registrado, así
             // que la solicitud aparece en el reporte con 0 horas y 0 costo.
             const filas = [];
             citasMes.forEach(cita => {
