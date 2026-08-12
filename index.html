@@ -3127,6 +3127,16 @@
             }
 
             const citaOriginal = citasCache.find(c => c.id === id);
+
+            // Misma regla de equipos pesados que al crear una asignación nueva: máximo
+            // 16h por solicitud, salvo que ya esté marcada como urgente. Antes esto
+            // solo se validaba al crear, así que un admin podía editar la duración muy
+            // por encima de 16h sin que el sistema lo bloqueara.
+            if (esEquipoPesado(equipo) && !(citaOriginal && citaOriginal.urgente) && duracion > 16) {
+                mostrarAlerta(`❌ "${equipo}" es un equipo pesado: cada solicitud no puede pasar de 16 horas. Márcala como urgente desde la tarjeta si de verdad necesita más tiempo.`, 'error');
+                return;
+            }
+
             const conflicto = verificarConflicto(equipo, inicio, duracion, id, citaOriginal ? citaOriginal.urgente : false);
             if (conflicto) {
                 mostrarAlerta(`❌ ${conflicto}`, 'error');
