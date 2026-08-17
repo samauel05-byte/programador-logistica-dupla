@@ -2163,18 +2163,6 @@
             return Math.round(total * 10000) / 10000;
         }
 
-        // Devuelve el inicio de la próxima jornada laboral disponible (saltando domingos)
-        function siguienteInicioJornada(fecha) {
-            let d = new Date(fecha);
-            d.setDate(d.getDate() + 1);
-            d.setHours(0, 0, 0, 0);
-            while (!JORNADA_LABORAL[d.getDay()]) {
-                d.setDate(d.getDate() + 1);
-            }
-            const ventana = JORNADA_LABORAL[d.getDay()];
-            return horaDecimalADate(d, ventana[0]);
-        }
-
         // Hora de almuerzo: de 12:00pm a 1:00pm el equipo se detiene automáticamente,
         // incluso si la asignación está marcada como urgente.
         const ALMUERZO_INICIO = 12;
@@ -3191,22 +3179,26 @@
         }
 
         // Generar reporte mensual y limpiar datos antiguos
-        // Parte una reserva en segmentos, uno por cada dia de jornada laboral que
-        // realmente ocupa (una reserva que cruza medianoche o fin de semana genera
-        // varios segmentos, cada uno con sus propias horas trabajadas ese dia).
+        // Parte una reserva en segmentos, uno por cada ventana laboral que realmente
+        // ocupa (una reserva que cruza medianoche, el almuerzo, o fin de semana genera
+        // varios segmentos, cada uno con sus propias horas trabajadas ese día).
+        //
+        // Usa las mismas ventanas que calcularFinJornada() (vía ventanasDelDia/
+        // siguienteVentanaDesde/finDeVentanaActual) para que el reporte quede
+        // consistente con la hora de fin real que ya calcula y bloquea el equipo en
+        // el resto del sistema. Antes esta función usaba el bloque de jornada
+        // completo (ej. 8:30am-5pm = 8.5h) sin excluir el almuerzo, así que un
+        // trabajo de varios días aparecía "terminando" hasta 1h antes por cada día
+        // completo de por medio, y el último día del reporte podía quedar con
+        // apenas minutos en vez de las horas reales que le tocaban.
         function calcularSegmentosPorDia(inicioStr, duracionHoras) {
-            let cursor = new Date(inicioStr);
+            let cursor = siguienteVentanaDesde(new Date(inicioStr), false);
             let restante = Number(duracionHoras) || 0;
             const segmentos = [];
             let guard = 0;
             while (restante > 1e-6 && guard < 1000) {
                 guard++;
-                const ventana = JORNADA_LABORAL[cursor.getDay()];
-                if (!ventana) { cursor = siguienteInicioJornada(cursor); continue; }
-                const inicioVentana = horaDecimalADate(cursor, ventana[0]);
-                const finVentana = horaDecimalADate(cursor, ventana[1]);
-                if (cursor < inicioVentana) cursor = new Date(inicioVentana);
-                if (cursor >= finVentana) { cursor = siguienteInicioJornada(cursor); continue; }
+                const finVentana = finDeVentanaActual(cursor, false);
                 const disponibleHoras = (finVentana - cursor) / (3600 * 1000);
                 const consumidas = Math.min(restante, disponibleHoras);
                 const segInicio = new Date(cursor);
@@ -3216,7 +3208,7 @@
                 segmentos.push({ fecha: fechaKey, inicio: segInicio, fin: segFin, horas: consumidas });
                 cursor = segFin;
                 restante -= consumidas;
-                if (restante > 1e-6 && cursor >= finVentana) cursor = siguienteInicioJornada(cursor);
+                if (restante > 1e-6) cursor = siguienteVentanaDesde(cursor, false);
             }
             return segmentos;
         }
