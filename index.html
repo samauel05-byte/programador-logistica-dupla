@@ -3134,7 +3134,15 @@
                 return;
             }
 
-            const conflicto = verificarConflicto(equipo, inicio, duracion, id, citaOriginal ? citaOriginal.urgente : false);
+            // Si se está corrigiendo el Inicio Real (llegó/arrancó en un horario
+            // distinto al programado), el choque de horario debe revisarse contra
+            // ESE horario real, no contra el horario programado original — igual
+            // que hace inicioEfectivo() para todas las demás citas. Si no, una
+            // corrección legítima (ej. "en verdad arrancó más tarde, después de que
+            // el otro trabajo terminara") se rechazaba usando la hora programada
+            // vieja, que en el papel sí chocaba.
+            const inicioParaConflicto = inicioRealInput || inicio;
+            const conflicto = verificarConflicto(equipo, inicioParaConflicto, duracion, id, citaOriginal ? citaOriginal.urgente : false);
             if (conflicto) {
                 mostrarAlerta(`❌ ${conflicto}`, 'error');
                 return;
