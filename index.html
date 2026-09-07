@@ -1368,10 +1368,12 @@
         ];
 
         // Equipos "pesados" (minicargadores y telehandlers): sujetos a un
-        // mínimo de 16h por solicitud y a un margen de 2 días entre
-        // solicitudes del mismo proyecto, para que no acaparen el equipo y
-        // otros tengan oportunidad de usarlo. Las solicitudes urgentes se
-        // saltan esta regla (ya requieren aprobación manual del coordinador).
+        // máximo de 16h por solicitud, para que no acaparen el equipo y
+        // otros tengan oportunidad de usarlo. Los minicargadores además
+        // requieren un margen de 2 días entre solicitudes del mismo proyecto
+        // (los telehandler no tienen ese problema de disponibilidad). Las
+        // solicitudes urgentes se saltan estas reglas (ya requieren
+        // aprobación manual del coordinador).
         function esEquipoPesado(equipo) {
             return equipo.includes('Minicargador') || equipo.includes('Telehandler');
         }
@@ -2047,32 +2049,36 @@
 
             // Regla de equipos pesados (minicargador/telehandler): cada
             // solicitud puede ser de hasta 16h como máximo (menos de 16 sí se
-            // permite), para que el equipo tenga rejuego entre proyectos. 2
-            // días de margen entre solicitudes del mismo proyecto. Salvo que
-            // sea urgente (ahí decide el coordinador).
+            // permite), para que el equipo tenga rejuego entre proyectos.
+            // Salvo que sea urgente (ahí decide el coordinador).
             if (esEquipoPesado(equipo) && !esUrgente) {
                 if (duracion > 16) {
                     mostrarAlerta(`❌ "${equipo}" es un equipo pesado: cada solicitud no puede pasar de 16 horas, para que haya rejuego con otros proyectos. Marca "Es urgente" si necesitas más tiempo y que lo apruebe el coordinador.`, 'error');
                     return;
                 }
 
-                const nuevoInicio = new Date(inicio);
-                const nuevoFin = calcularFinJornada(nuevoInicio, duracion, false);
-                const DOS_DIAS_MS = 2 * 24 * 60 * 60 * 1000;
+                // Los 2 días de margen entre solicitudes del mismo proyecto solo
+                // aplican a Minicargadores — los Telehandler no tienen ese
+                // problema de disponibilidad entre proyectos.
+                if (!equipo.includes('Telehandler')) {
+                    const nuevoInicio = new Date(inicio);
+                    const nuevoFin = calcularFinJornada(nuevoInicio, duracion, false);
+                    const DOS_DIAS_MS = 2 * 24 * 60 * 60 * 1000;
 
-                const solicitudReciente = citasCache.find(c => {
-                    if (!esEquipoPesado(c.equipo)) return false;
-                    if ((c.proyecto || '').trim().toLowerCase() !== proyecto.toLowerCase()) return false;
-                    const cInicio = inicioEfectivo(c);
-                    const cFin = c.finalizado_en ? new Date(c.finalizado_en) : finEstimado(c);
-                    if (cFin <= nuevoInicio) return (nuevoInicio - cFin) < DOS_DIAS_MS;
-                    if (nuevoFin <= cInicio) return (cInicio - nuevoFin) < DOS_DIAS_MS;
-                    return false; // se solapan: ya lo maneja buscarConflictos más abajo
-                });
+                    const solicitudReciente = citasCache.find(c => {
+                        if (!esEquipoPesado(c.equipo) || c.equipo.includes('Telehandler')) return false;
+                        if ((c.proyecto || '').trim().toLowerCase() !== proyecto.toLowerCase()) return false;
+                        const cInicio = inicioEfectivo(c);
+                        const cFin = c.finalizado_en ? new Date(c.finalizado_en) : finEstimado(c);
+                        if (cFin <= nuevoInicio) return (nuevoInicio - cFin) < DOS_DIAS_MS;
+                        if (nuevoFin <= cInicio) return (cInicio - nuevoFin) < DOS_DIAS_MS;
+                        return false; // se solapan: ya lo maneja buscarConflictos más abajo
+                    });
 
-                if (solicitudReciente) {
-                    mostrarAlerta(`❌ El proyecto "${proyecto}" ya usó un equipo pesado (${solicitudReciente.equipo}) muy cerca de esta fecha. Debe pasar al menos 2 días entre solicitudes de equipo pesado del mismo proyecto para darle chance a otros. Marca "Es urgente" si de verdad lo necesitas antes.`, 'error');
-                    return;
+                    if (solicitudReciente) {
+                        mostrarAlerta(`❌ El proyecto "${proyecto}" ya usó un equipo pesado (${solicitudReciente.equipo}) muy cerca de esta fecha. Debe pasar al menos 2 días entre solicitudes de equipo pesado del mismo proyecto para darle chance a otros. Marca "Es urgente" si de verdad lo necesitas antes.`, 'error');
+                        return;
+                    }
                 }
             }
 
