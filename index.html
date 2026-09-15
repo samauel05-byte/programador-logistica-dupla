@@ -2258,11 +2258,28 @@
             renderizarSolicitudesRenta();
         }
 
+        // Una solicitud deja de mostrarse en el panel cuando:
+        // - fue Rechazada y ya pasaron 10 minutos desde el rechazo (se conserva
+        //   en la base de datos, solo se oculta de la vista).
+        // - fue Aprobada y ya se marcó como entregada (el equipo rentado llegó a la obra).
+        // Las Pendientes y las Aprobadas sin entregar siempre se muestran.
+        function solicitudRentaVisible(s) {
+            const DIEZ_MIN_MS = 10 * 60 * 1000;
+            if (s.estado === 'Rechazada') {
+                if (!s.resuelto_en) return true;
+                return (Date.now() - new Date(s.resuelto_en).getTime()) < DIEZ_MIN_MS;
+            }
+            if (s.estado === 'Aprobada' && s.entregado_en) return false;
+            return true;
+        }
+
         function renderizarSolicitudesRenta() {
             const cont = document.getElementById('listaSolicitudesRenta');
             if (!cont) return;
 
-            if (solicitudesRentaCache.length === 0) {
+            const visibles = solicitudesRentaCache.filter(solicitudRentaVisible);
+
+            if (visibles.length === 0) {
                 cont.innerHTML = '<p style="color:#6B7280;">No hay solicitudes de renta todavía.</p>';
                 return;
             }
@@ -2273,7 +2290,7 @@
                 'Rechazada': { fondo: '#FEE2E2', borde: '#FCA5A5', icono: '🔴' }
             };
 
-            cont.innerHTML = solicitudesRentaCache.map(s => {
+            cont.innerHTML = visibles.map(s => {
                 const c = colores[s.estado] || colores['Pendiente'];
                 const fecha = s.created_at ? new Date(s.created_at).toLocaleString('es-DO') : '';
                 return `
@@ -2283,10 +2300,20 @@
                         <div style="font-size:0.9rem; color:#374151; margin-top:0.3rem;"><strong>Motivo:</strong> ${escapeHtml(s.motivo)}</div>
                         ${s.notas ? `<div style="font-size:0.9rem; color:#374151; margin-top:0.2rem;"><strong>Notas:</strong> ${escapeHtml(s.notas)}</div>` : ''}
                         <div style="font-size:0.85rem; margin-top:0.4rem; font-weight:600;">Estado: ${s.estado}</div>
+                        ${s.estado === 'Aprobada' && s.inicio ? `<div style="font-size:0.85rem; margin-top:0.2rem;">📅 ${new Date(s.inicio).toLocaleString('es-DO')} · ${s.duracion}h</div>` : ''}
                         ${modoAdminActivo && s.estado === 'Pendiente' ? `
-                            <div style="margin-top:0.6rem;">
+                            <div style="margin-top:0.6rem; display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center;">
+                                <input type="datetime-local" id="rentaAprobarFecha_${s.id}" style="padding:0.3rem; font-size:0.8rem; border:1px solid var(--color-border); border-radius:4px;">
+                                <input type="number" id="rentaAprobarDuracion_${s.id}" placeholder="Duración (h)" min="1" step="1" style="width:110px; padding:0.3rem; font-size:0.8rem; border:1px solid var(--color-border); border-radius:4px;">
+                            </div>
+                            <div style="margin-top:0.5rem;">
                                 <button type="button" onclick="aprobarRenta('${s.id}')" style="margin-right:0.4rem; padding:0.3rem 0.6rem; font-size:0.8rem; background:#10B981; color:white; border:none; border-radius:4px; cursor:pointer;">✅ Aprobar</button>
                                 <button type="button" onclick="rechazarRenta('${s.id}')" style="padding:0.3rem 0.6rem; font-size:0.8rem; background:#DC2626; color:white; border:none; border-radius:4px; cursor:pointer;">❌ Rechazar</button>
+                            </div>
+                        ` : ''}
+                        ${modoAdminActivo && s.estado === 'Aprobada' && !s.entregado_en ? `
+                            <div style="margin-top:0.6rem;">
+                                <button type="button" onclick="marcarRentaEntregada('${s.id}')" style="padding:0.3rem 0.6rem; font-size:0.8rem; background:#2563EB; color:white; border:none; border-radius:4px; cursor:pointer;">📦 Marcar como Entregada</button>
                             </div>
                         ` : ''}
                     </div>
@@ -2371,13 +2398,24 @@
             }
         });
 
-        // Aprueba una solicitud de renta pendiente. Requiere la contraseña del
-        // administrador, igual que aprobar una urgencia.
+        // Aprueba una solicitud de renta pendiente. El administrador debe indicar
+        // la fecha/hora y la duración del equipo rentado, además de la contraseña.
         async function aprobarRenta(id) {
             if (!modoAdminActivo) {
                 mostrarAlerta('🔒 Necesitas estar en modo administrador', 'error');
                 return;
             }
+
+            const inputFecha = document.getElementById(`rentaAprobarFecha_${id}`);
+            const inputDuracion = document.getElementById(`rentaAprobarDuracion_${id}`);
+            const inicio = inputFecha ? inputFecha.value : '';
+            const duracion = inputDuracion ? parseFloat(inputDuracion.value) : NaN;
+
+            if (!inicio || !duracion || duracion <= 0) {
+                mostrarAlerta('⚠️ Indica la fecha/hora y la duración del equipo antes de aprobar', 'error');
+                return;
+            }
+
             const codigo = prompt('Ingresa la contraseña del administrador para APROBAR esta solicitud de renta:');
             if (codigo === null) return;
             if (!codigo) {
@@ -2388,7 +2426,9 @@
             const { error } = await sb.rpc('admin_resolver_renta', {
                 codigo: codigo,
                 id_solicitud: id,
-                p_estado: 'Aprobada'
+                p_estado: 'Aprobada',
+                p_inicio: inicio,
+                p_duracion: duracion
             });
 
             if (error) {
@@ -2432,6 +2472,35 @@
 
             await recargarSolicitudesRenta();
             mostrarAlerta('✅ Solicitud de renta rechazada', 'success');
+        }
+
+        // Marca una solicitud aprobada como "entregada" (el equipo rentado ya
+        // llegó a la obra) — a partir de ahí deja de mostrarse en el panel.
+        // Requiere la contraseña del administrador.
+        async function marcarRentaEntregada(id) {
+            if (!modoAdminActivo) {
+                mostrarAlerta('🔒 Necesitas estar en modo administrador', 'error');
+                return;
+            }
+            const codigo = prompt('Ingresa la contraseña del administrador para marcar esta renta como ENTREGADA:');
+            if (codigo === null) return;
+            if (!codigo) {
+                mostrarAlerta('🔒 Debes ingresar la contraseña del administrador', 'error');
+                return;
+            }
+
+            const { error } = await sb.rpc('admin_marcar_renta_entregada', {
+                codigo: codigo,
+                id_solicitud: id
+            });
+
+            if (error) {
+                mostrarAlerta('🔒 Contraseña de administrador incorrecta o no se pudo marcar como entregada', 'error');
+                return;
+            }
+
+            await recargarSolicitudesRenta();
+            mostrarAlerta('✅ Renta marcada como entregada', 'success');
         }
 
         // ===== Jornada laboral =====
