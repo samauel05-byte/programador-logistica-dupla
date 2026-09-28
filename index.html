@@ -1018,6 +1018,18 @@
             </div>
         </div>
 
+        <div class="card" id="cardAgregarProyecto" style="display: none;">
+            <h2 class="section-title">🏗️ Agregar Proyecto/Obra</h2>
+            <p style="margin-bottom: 1rem; color: #6B7280;">
+                Agrega una obra nueva a la lista de proyectos — aparece de inmediato en el formulario para <strong>todos los usuarios</strong>. Solo el administrador puede agregar proyectos.
+            </p>
+            <div class="form-group" style="max-width: 400px;">
+                <label for="nuevoProyectoNombre">Nombre del Proyecto</label>
+                <input type="text" id="nuevoProyectoNombre" placeholder="Ej: HACIENDA D10" style="text-transform: uppercase;">
+            </div>
+            <button type="button" onclick="agregarProyecto()" style="max-width: 260px;">+ Agregar Proyecto</button>
+        </div>
+
         <div class="card">
             <h2 class="section-title">🔐 Acceso Administrador</h2>
             <p style="margin-bottom: 1.5rem; color: #6B7280;">
@@ -1743,6 +1755,18 @@
                     async (payload) => {
                         console.log('Cambio en solicitudes de renta:', payload);
                         await recargarSolicitudesRenta();
+                    }
+                )
+                .subscribe();
+
+            // Escuchar cambios en los proyectos adicionales (para todos los usuarios)
+            sb.channel('public:proyectos_adicionales')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'proyectos_adicionales' },
+                    async (payload) => {
+                        console.log('Cambio en proyectos adicionales:', payload);
+                        await recargarProyectosAdicionales();
                     }
                 )
                 .subscribe();
@@ -2515,6 +2539,86 @@
             mostrarAlerta('✅ Renta marcada como entregada', 'success');
         }
 
+        // ===== Proyectos adicionales (agregados por el administrador) =====
+        // La lista base de proyectos vive fija en el HTML (<option> de #proyecto).
+        // Estos son los que el administrador va agregando encima, sin tocar código,
+        // y se guardan en la nube para que los vea todo el mundo.
+
+        let proyectosAdicionalesCache = [];
+
+        async function recargarProyectosAdicionales() {
+            const { data, error } = await sb
+                .from('proyectos_adicionales')
+                .select('nombre')
+                .order('created_at', { ascending: true });
+            if (error) {
+                console.error('Error cargando proyectos adicionales:', error);
+                return;
+            }
+            proyectosAdicionalesCache = (data || []).map(p => p.nombre);
+            actualizarListaProyectos();
+        }
+
+        // Agrega las opciones de proyectos adicionales a un <select>/<datalist> sin
+        // tocar las opciones fijas que ya trae el HTML, conservando la selección
+        // actual si sigue siendo válida.
+        function actualizarListaProyectos() {
+            [document.getElementById('proyecto'), document.getElementById('rentaProyecto')].forEach(select => {
+                if (!select) return;
+                const seleccionPrevia = select.value;
+                select.querySelectorAll('option[data-adicional]').forEach(o => o.remove());
+                proyectosAdicionalesCache.forEach(nombre => {
+                    const opt = document.createElement('option');
+                    opt.value = nombre;
+                    opt.textContent = nombre;
+                    opt.dataset.adicional = '1';
+                    select.appendChild(opt);
+                });
+                if (seleccionPrevia) select.value = seleccionPrevia;
+            });
+
+            const datalist = document.getElementById('proyectosList');
+            if (datalist) {
+                datalist.querySelectorAll('option[data-adicional]').forEach(o => o.remove());
+                proyectosAdicionalesCache.forEach(nombre => {
+                    const opt = document.createElement('option');
+                    opt.value = nombre;
+                    opt.dataset.adicional = '1';
+                    datalist.appendChild(opt);
+                });
+            }
+        }
+
+        // Agrega un proyecto/obra nuevo a la lista (solo administrador). Siempre se
+        // guarda en mayúsculas para que quede igual que el resto de los proyectos,
+        // sin importar cómo lo haya escrito quien lo agregó.
+        async function agregarProyecto() {
+            if (!modoAdminActivo) {
+                mostrarAlerta('🔒 Necesitas estar en modo administrador', 'error');
+                return;
+            }
+            const input = document.getElementById('nuevoProyectoNombre');
+            const nombre = (input.value || '').trim().toUpperCase();
+            if (!nombre) {
+                mostrarAlerta('⚠️ Escribe el nombre del proyecto', 'error');
+                return;
+            }
+
+            const { error } = await sb.rpc('admin_agregar_proyecto', {
+                codigo: codigoAdminSesion,
+                p_nombre: nombre
+            });
+
+            if (error) {
+                mostrarAlerta('🔒 No se pudo agregar el proyecto (contraseña incorrecta o error de conexión)', 'error');
+                return;
+            }
+
+            input.value = '';
+            await recargarProyectosAdicionales();
+            mostrarAlerta(`✅ Proyecto "${nombre}" agregado`, 'success');
+        }
+
         // ===== Jornada laboral =====
         // Lunes a viernes: 8:30am - 5:00pm (8.5h) | Sábado: 8:30am - 12:00pm (3.5h) | Domingo: no laborable.
         // La "duración" de una asignación se cuenta en horas de jornada laboral, no en horas de reloj corridas:
@@ -3180,6 +3284,8 @@
                 if (cardVaciar) cardVaciar.style.display = 'block';
                 const cardBranding = document.getElementById('cardBranding');
                 if (cardBranding) cardBranding.style.display = 'block';
+                const cardProyecto = document.getElementById('cardAgregarProyecto');
+                if (cardProyecto) cardProyecto.style.display = 'block';
                 mostrarAlerta('✅ Modo administrador activado', 'success');
                 actualizarDashboard();
                 renderizarListaEquiposTemporales();
@@ -3198,6 +3304,8 @@
                 if (cardVaciar) cardVaciar.style.display = 'none';
                 const cardBranding = document.getElementById('cardBranding');
                 if (cardBranding) cardBranding.style.display = 'none';
+                const cardProyecto = document.getElementById('cardAgregarProyecto');
+                if (cardProyecto) cardProyecto.style.display = 'none';
                 renderizarSolicitudesRenta();
                 mostrarAlerta('❌ Código maestro incorrecto', 'error');
                 document.getElementById('codigoMaestro').value = '';
@@ -4674,6 +4782,7 @@
             await recargarEquipos();
             await recargarConfiguracion();
             await recargarSolicitudesRenta();
+            await recargarProyectosAdicionales();
             configurarRealtime();
             actualizarDashboard();
             verificarDisponibilidadEnVivo();
@@ -4686,6 +4795,7 @@
             await recargarEquipos();
             await recargarConfiguracion();
             await recargarSolicitudesRenta();
+            await recargarProyectosAdicionales();
             actualizarDashboard();
             verificarDisponibilidadEnVivo();
         }, 60000);
