@@ -990,6 +990,11 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="rentaTiempoNecesario">¿Por cuánto tiempo lo necesita? *</label>
+                    <input type="text" id="rentaTiempoNecesario" placeholder="Ej: 8 horas, 2 días, 1 semana..." required>
+                </div>
+
+                <div class="form-group">
                     <label for="rentaNotas">Notas Adicionales</label>
                     <textarea id="rentaNotas" placeholder="Fechas, proveedor sugerido, duración estimada, etc. (opcional)"></textarea>
                 </div>
@@ -2334,13 +2339,18 @@
                         <div style="font-weight:700; margin-bottom:0.3rem;">${c.icono} ${escapeHtml(s.equipo)} — ${escapeHtml(s.proyecto)}</div>
                         <div style="font-size:0.9rem; color:#374151;">Solicitado por: ${escapeHtml(s.nombre)} · ${fecha}</div>
                         <div style="font-size:0.9rem; color:#374151; margin-top:0.3rem;"><strong>Motivo:</strong> ${escapeHtml(s.motivo)}</div>
+                        ${s.tiempo_necesario ? `<div style="font-size:0.9rem; color:#374151; margin-top:0.2rem;"><strong>Tiempo necesario:</strong> ${escapeHtml(s.tiempo_necesario)}</div>` : ''}
                         ${s.notas ? `<div style="font-size:0.9rem; color:#374151; margin-top:0.2rem;"><strong>Notas:</strong> ${escapeHtml(s.notas)}</div>` : ''}
                         <div style="font-size:0.85rem; margin-top:0.4rem; font-weight:600;">Estado: ${s.estado}</div>
                         ${s.estado === 'Aprobada' && s.inicio ? `<div style="font-size:0.85rem; margin-top:0.2rem;">📅 ${new Date(s.inicio).toLocaleString('es-DO')} · ${s.duracion}h</div>` : ''}
+                        ${s.estado === 'Rechazada' && s.motivo_rechazo ? `<div style="font-size:0.85rem; margin-top:0.2rem; color:#991B1B;"><strong>Motivo del rechazo:</strong> ${escapeHtml(s.motivo_rechazo)}</div>` : ''}
                         ${modoAdminActivo && s.estado === 'Pendiente' ? `
                             <div style="margin-top:0.6rem; display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center;">
                                 <input type="datetime-local" id="rentaAprobarFecha_${s.id}" style="padding:0.3rem; font-size:0.8rem; border:1px solid var(--color-border); border-radius:4px;">
                                 <input type="number" id="rentaAprobarDuracion_${s.id}" placeholder="Duración (h)" min="1" step="1" style="width:110px; padding:0.3rem; font-size:0.8rem; border:1px solid var(--color-border); border-radius:4px;">
+                            </div>
+                            <div style="margin-top:0.5rem;">
+                                <textarea id="rentaRechazarMotivo_${s.id}" placeholder="Motivo del rechazo (obligatorio para rechazar)" style="width:100%; min-height:50px; padding:0.4rem; font-size:0.8rem; border:1px solid var(--color-border); border-radius:4px; font-family:inherit;"></textarea>
                             </div>
                             <div style="margin-top:0.5rem;">
                                 <button type="button" onclick="aprobarRenta('${s.id}')" style="margin-right:0.4rem; padding:0.3rem 0.6rem; font-size:0.8rem; background:#10B981; color:white; border:none; border-radius:4px; cursor:pointer;">✅ Aprobar</button>
@@ -2367,6 +2377,7 @@
                 `Obra: ${solicitud.proyecto}`,
                 `Equipo a rentar: ${solicitud.equipo}`,
                 `Motivo: ${solicitud.motivo}`,
+                `Tiempo necesario: ${solicitud.tiempo_necesario}`,
                 solicitud.notas ? `Notas: ${solicitud.notas}` : null,
                 '',
                 'Apruébala o recházala desde aquí:',
@@ -2397,15 +2408,17 @@
             const proyecto = document.getElementById('rentaProyecto').value;
             const equipo = document.getElementById('rentaEquipo').value.trim();
             const motivo = document.getElementById('rentaMotivo').value.trim();
+            const tiempoNecesario = document.getElementById('rentaTiempoNecesario').value.trim();
             const notas = document.getElementById('rentaNotas').value.trim();
 
-            if (!nombre || !proyecto || !equipo || !motivo) {
+            if (!nombre || !proyecto || !equipo || !motivo || !tiempoNecesario) {
                 mostrarAlerta('⚠️ Completa todos los campos requeridos', 'error');
                 return;
             }
 
             const solicitud = {
                 nombre, proyecto, equipo, motivo,
+                tiempo_necesario: tiempoNecesario,
                 notas: notas || null,
                 estado: 'Pendiente'
             };
@@ -2464,7 +2477,8 @@
                 id_solicitud: id,
                 p_estado: 'Aprobada',
                 p_inicio: inicio,
-                p_duracion: duracion
+                p_duracion: duracion,
+                p_motivo_rechazo: null
             });
 
             if (error) {
@@ -2476,7 +2490,8 @@
             mostrarAlerta('✅ Solicitud de renta aprobada', 'success');
         }
 
-        // Rechaza una solicitud de renta pendiente. Requiere la contraseña del administrador.
+        // Rechaza una solicitud de renta pendiente. Exige un motivo de rechazo y la
+        // contraseña del administrador.
         async function rechazarRenta(id) {
             if (!modoAdminActivo) {
                 mostrarAlerta('🔒 Necesitas estar en modo administrador', 'error');
@@ -2484,6 +2499,13 @@
             }
             const solicitud = solicitudesRentaCache.find(s => s.id === id);
             if (!solicitud) return;
+
+            const inputMotivo = document.getElementById(`rentaRechazarMotivo_${id}`);
+            const motivoRechazo = inputMotivo ? inputMotivo.value.trim() : '';
+            if (!motivoRechazo) {
+                mostrarAlerta('⚠️ Indica el motivo del rechazo antes de rechazar la solicitud', 'error');
+                return;
+            }
 
             const confirmar = confirm(`¿Rechazar la solicitud de renta de "${solicitud.equipo}" para "${solicitud.proyecto}"?`);
             if (!confirmar) return;
@@ -2498,7 +2520,10 @@
             const { error } = await sb.rpc('admin_resolver_renta', {
                 codigo: codigo,
                 id_solicitud: id,
-                p_estado: 'Rechazada'
+                p_estado: 'Rechazada',
+                p_inicio: null,
+                p_duracion: null,
+                p_motivo_rechazo: motivoRechazo
             });
 
             if (error) {
